@@ -155,8 +155,8 @@ class App(tk.Tk):
                 return
             self.current_user = user
             messagebox.showinfo("Success", f"Welcome {user['full_name']}")
-            # Next: route to role dashboard (placeholder)
-            self.show_landing()
+            # Route to role dashboard
+            self.show_dashboard(user["role"]) 
 
         ttk.Button(login_frame, text="Login", style="Role.TButton", command=on_login).grid(row=2, column=0, columnspan=2, pady=12)
 
@@ -351,6 +351,32 @@ class App(tk.Tk):
             self.bg.tag_bind(tag_img, "<Button-1>", _click)
             self.bg.tag_bind(tag_txt, "<Button-1>", _click)
 
+
+    def show_dashboard(self, role: str):
+        self.clear()
+        self._mode = "dashboard"
+        # For app pages, dock content near the left to use full width like dashboards
+        self.container.place(relx=0.02, rely=0.06, anchor="nw")
+        def _logout():
+            self.current_user = None
+            self.show_landing()
+        try:
+            if role == "guard":
+                from pages.guard_page import render as render_guard
+                render_guard(self.container, on_logout=_logout, current_user=self.current_user)
+            elif role == "member":
+                from pages.member_page import render as render_member
+                render_member(self.container, on_logout=_logout, current_user=self.current_user)
+            elif role == "admin":
+                from pages.admin_page import render as render_admin
+                render_admin(self.container, on_logout=_logout, current_user=self.current_user)
+            else:
+                messagebox.showerror("Unknown role", f"Unsupported role: {role}")
+                self.show_landing()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load dashboard: {e}")
+            self.show_landing()
+        
 
 if __name__ == "__main__":
     app = App()
