@@ -11,6 +11,15 @@ class App(tk.Tk):
         self.title("Parking Management System")
         self.geometry("900x640")
         self.resizable(True, True)
+        
+        # Maximize window on startup
+        try:
+            self.state('zoomed')  # Windows
+        except:
+            try:
+                self.attributes('-zoomed', True)  # Linux
+            except:
+                pass  # Fallback for other systems
 
         # Theming and subtle glass-like styling
         style = ttk.Style()
@@ -150,9 +159,26 @@ class App(tk.Tk):
 
         def on_login():
             user = self.auth.login(email_var.get().strip(), password_var.get())
-            if not user or user["role"] != role:
-                messagebox.showerror("Login failed", "Invalid credentials or role mismatch")
+            if not user:
+                messagebox.showerror("Login failed", "Invalid credentials")
                 return
+            
+            # Special admin access restriction
+            if role == "admin":
+                admin_email = "ravi.abhinavyadav@gmail.com"
+                if user["email"] != admin_email:
+                    messagebox.showerror("Access Denied", f"Admin access is restricted to {admin_email} only. Other campus employees can register but won't have admin privileges.")
+                    return
+                # Verify user has admin role for the restricted email
+                if user["role"] != "admin":
+                    messagebox.showerror("Login failed", "Invalid role for admin access")
+                    return
+            else:
+                # For guard and member roles, check role match
+                if user["role"] != role:
+                    messagebox.showerror("Login failed", "Invalid credentials or role mismatch")
+                    return
+            
             self.current_user = user
             messagebox.showinfo("Success", f"Welcome {user['full_name']}")
             # Route to role dashboard
@@ -175,6 +201,15 @@ class App(tk.Tk):
 
         def on_register():
             try:
+                # Check for admin role restriction during registration
+                if role == "admin":
+                    admin_email = "ravi.abhinavyadav@gmail.com"
+                    if reg_fields["Email"].get().strip() != admin_email:
+                        messagebox.showwarning("Admin Registration Restricted", 
+                                             f"Admin access is restricted to {admin_email} only. "
+                                             "Other campus employees can register with different roles.")
+                        return
+                
                 self.auth.register(
                     reg_fields["College ID"].get().strip(),
                     reg_fields["Full Name"].get().strip(),
@@ -249,6 +284,10 @@ class App(tk.Tk):
             if hasattr(self, "_relayout_job") and self._relayout_job:
                 self.after_cancel(self._relayout_job)
             self._relayout_job = self.after(80, self._draw_landing)
+        
+        # Force layout update for dashboard views
+        if self._mode == "dashboard":
+            self.update_idletasks()
 
     def _draw_landing(self):
         # Remove previous landing items
@@ -355,8 +394,12 @@ class App(tk.Tk):
     def show_dashboard(self, role: str):
         self.clear()
         self._mode = "dashboard"
-        # For app pages, dock content near the left to use full width like dashboards
-        self.container.place(relx=0.02, rely=0.06, anchor="nw")
+        # Make container fill the entire window
+        self.container.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0, anchor="nw")
+        
+        # Configure container to expand
+        self.container.grid_rowconfigure(0, weight=1)
+        self.container.grid_columnconfigure(0, weight=1)
         def _logout():
             self.current_user = None
             self.show_landing()

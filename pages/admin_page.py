@@ -7,26 +7,37 @@ _admin = AdminService()
 
 def render(parent, on_logout, current_user=None):
     wrapper = ttk.Frame(parent)
-    wrapper.grid(row=0, column=0)
+    wrapper.grid(row=0, column=0, sticky="nsew")
+    
+    # Configure wrapper to expand
+    wrapper.grid_rowconfigure(1, weight=1)  # Tabs row expands
+    wrapper.grid_columnconfigure(0, weight=1)  # Main column expands
 
     # Topbar
     bar = ttk.Frame(wrapper)
     bar.grid(row=0, column=0, sticky="ew")
     bar.grid_columnconfigure(0, weight=1)
-    title = ttk.Label(bar, text="Campus Management Dashboard")
+    title = ttk.Label(bar, text="Campus Management Dashboard - Admin Access")
     title.configure(font=("Segoe UI Semibold", 13))
     title.grid(row=0, column=0, sticky="w")
     ttk.Button(bar, text="Logout", command=on_logout).grid(row=0, column=1, sticky="e")
 
     # Tabs
     tabs_card = ttk.Frame(wrapper)
-    tabs_card.grid(row=1, column=0, padx=24, pady=12, sticky="n")
+    tabs_card.grid(row=1, column=0, padx=24, pady=(4, 12), sticky="nsew")
+    tabs_card.grid_rowconfigure(0, weight=1)
+    tabs_card.grid_columnconfigure(0, weight=1)
     nb = ttk.Notebook(tabs_card)
-    nb.grid(row=0, column=0)
+    nb.grid(row=0, column=0, sticky="nsew")
 
     dash_tab = ttk.Frame(nb)
     verify_tab = ttk.Frame(nb)
     flags_tab = ttk.Frame(nb)
+    
+    # Configure tabs to expand
+    for tab in (dash_tab, verify_tab, flags_tab):
+        tab.grid_rowconfigure(0, weight=1)
+        tab.grid_columnconfigure(0, weight=1)
 
     nb.add(dash_tab, text="Dashboard")
     nb.add(verify_tab, text="Verification")
@@ -34,7 +45,7 @@ def render(parent, on_logout, current_user=None):
 
     # Dashboard KPIs
     kpi_row = ttk.Frame(dash_tab)
-    kpi_row.grid(row=0, column=0, pady=(0, 12))
+    kpi_row.grid(row=0, column=0, pady=(0, 12))  # Align with top of content area
     def chip(lbl, val):
         f = ttk.Labelframe(kpi_row, text=lbl, style="Glass.TLabelframe")
         ttk.Label(f, text=str(val)).grid(row=0, column=0, padx=8, pady=8)
@@ -50,7 +61,7 @@ def render(parent, on_logout, current_user=None):
 
     # Verification queue
     rows = _admin.list_pending_verifications()
-    ttk.Label(verify_tab, text=f"Pending: {len(rows)}").grid(row=0, column=0, padx=8, pady=8, sticky="w")
+    ttk.Label(verify_tab, text=f"Pending: {len(rows)}").grid(row=0, column=0, padx=8, pady=(0, 8), sticky="w")  # Align with top
     for i, r in enumerate(rows, start=1):
         row_f = ttk.Frame(verify_tab)
         row_f.grid(row=i, column=0, sticky="w", pady=4)
@@ -72,7 +83,7 @@ def render(parent, on_logout, current_user=None):
 
     # Flags
     flags = _admin.list_open_flags()
-    ttk.Label(flags_tab, text=f"Open Flags: {len(flags)}").grid(row=0, column=0, padx=8, pady=8, sticky="w")
+    ttk.Label(flags_tab, text=f"Open Flags: {len(flags)}").grid(row=0, column=0, padx=8, pady=(0, 8), sticky="w")  # Align with top
     for i, f in enumerate(flags, start=1):
         row_f = ttk.Frame(flags_tab)
         row_f.grid(row=i, column=0, sticky="w", pady=4)

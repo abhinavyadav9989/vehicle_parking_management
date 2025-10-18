@@ -17,7 +17,7 @@ def _kpi_chip(parent, label_text: str, value_text: str):
 def _build_dashboard(tab):
     # KPI row
     kpi_row = ttk.Frame(tab)
-    kpi_row.grid(row=0, column=0, pady=(0, 12))
+    kpi_row.grid(row=0, column=0, pady=(0, 12))  # Align with top of content area
     # Live KPI values from DB
     kpis = [
         ("Vehicles Inside", str(_parking.count_active_inside())),
@@ -31,7 +31,7 @@ def _build_dashboard(tab):
 
     # Quick actions
     actions = ttk.Frame(tab)
-    actions.grid(row=1, column=0, pady=6, sticky="w")
+    actions.grid(row=1, column=0, pady=(12, 6), sticky="w")  # 12px gap from KPIs
     ttk.Button(actions, text="Scan Vehicle", style="Role.TButton").grid(row=0, column=0, padx=6)
     ttk.Button(actions, text="Parking Map", style="Role.TButton").grid(row=0, column=1, padx=6)
     def _process_exit():
@@ -62,7 +62,7 @@ def _build_identification(tab, guard_user_id: int):
 
     # Left: capture/upload
     left = ttk.Labelframe(tab, text="Capture / Upload", style="Glass.TLabelframe")
-    left.grid(row=0, column=0, padx=(0, 8), pady=(0, 8), sticky="n")
+    left.grid(row=0, column=0, padx=(0, 8), pady=(0, 8), sticky="n")  # Align with top
     ttk.Button(left, text="Open Camera", style="Role.TButton", state="disabled").grid(row=0, column=0, padx=8, pady=8)
     def _upload_image():
         path = filedialog.askopenfilename(filetypes=[("Images", "*.png;*.jpg;*.jpeg;*.bmp;*.webp")])
@@ -94,7 +94,7 @@ def _build_identification(tab, guard_user_id: int):
 
     # Right: result
     right = ttk.Labelframe(tab, text="Result", style="Glass.TLabelframe")
-    right.grid(row=0, column=1, padx=(8, 0), pady=(0, 8), sticky="n")
+    right.grid(row=0, column=1, padx=(8, 0), pady=(0, 8), sticky="n")  # Align with top
     ttk.Label(right, textvariable=plate_var).grid(row=0, column=1, padx=8, pady=(8, 2), sticky="w")
     ttk.Label(right, text="Plate:").grid(row=0, column=0, padx=8, pady=(8, 2), sticky="w")
     ttk.Label(right, text="Confidence:").grid(row=1, column=0, padx=8, pady=(0, 8), sticky="w")
@@ -102,7 +102,7 @@ def _build_identification(tab, guard_user_id: int):
 
     # Actions after lookup
     actions = ttk.Labelframe(tab, text="Actions", style="Glass.TLabelframe")
-    actions.grid(row=1, column=0, columnspan=2, sticky="w", pady=(0, 8))
+    actions.grid(row=1, column=0, columnspan=2, sticky="w", pady=(12, 8))  # 12px gap from above
     ttk.Label(actions, textvariable=status_var).grid(row=0, column=0, padx=8, pady=8, columnspan=4, sticky="w")
     ttk.Label(actions, text="Available Slot:").grid(row=1, column=0, padx=8, pady=(0, 8), sticky="w")
     combo_slot = ttk.Combobox(actions, values=[], width=20, state="readonly", textvariable=selected_slot)
@@ -147,21 +147,21 @@ def _build_identification(tab, guard_user_id: int):
 def _build_slots(tab):
     # Filters and grid placeholder
     controls = ttk.Frame(tab)
-    controls.grid(row=0, column=0, pady=(0, 8), sticky="w")
+    controls.grid(row=0, column=0, pady=(0, 8), sticky="w")  # Align with top
     ttk.Label(controls, text="Zone:").grid(row=0, column=0, padx=(0, 6))
     ttk.Combobox(controls, values=["All"], width=12, state="readonly").grid(row=0, column=1, padx=(0, 12))
     ttk.Label(controls, text="Level:").grid(row=0, column=2, padx=(0, 6))
     ttk.Combobox(controls, values=["All"], width=12, state="readonly").grid(row=0, column=3)
 
     grid = ttk.Labelframe(tab, text="Slots", style="Glass.TLabelframe")
-    grid.grid(row=1, column=0, sticky="w")
+    grid.grid(row=1, column=0, sticky="w", pady=(12, 0))  # 12px gap from controls
     ttk.Label(grid, text="Green = available, Red = occupied, Yellow = reserved").grid(row=0, column=0, padx=8, pady=8)
 
 
 def _build_profile(tab, current_user: dict | None):
     # Basic profile info
     info = ttk.Labelframe(tab, text="My Profile", style="Glass.TLabelframe")
-    info.grid(row=0, column=0, sticky="w")
+    info.grid(row=0, column=0, sticky="w", pady=(0, 0))  # Align with top
     name = (current_user or {}).get('full_name', '—')
     email = (current_user or {}).get('email', '—')
     verified = "Approved" if (current_user or {}).get('is_profile_verified') else "Pending"
@@ -172,7 +172,11 @@ def _build_profile(tab, current_user: dict | None):
 
 def render(parent, on_logout, current_user=None):
     wrapper = ttk.Frame(parent)
-    wrapper.grid(row=0, column=0)
+    wrapper.grid(row=0, column=0, sticky="nsew")
+    
+    # Configure wrapper to expand
+    wrapper.grid_rowconfigure(1, weight=1)  # Tabs row expands
+    wrapper.grid_columnconfigure(0, weight=1)  # Main column expands
 
     # Topbar
     bar = ttk.Frame(wrapper)
@@ -185,15 +189,22 @@ def render(parent, on_logout, current_user=None):
 
     # Tabs container
     tabs_card = ttk.Frame(wrapper)
-    tabs_card.grid(row=1, column=0, padx=24, pady=12, sticky="n")
+    tabs_card.grid(row=1, column=0, padx=24, pady=(4, 12), sticky="nsew")
+    tabs_card.grid_rowconfigure(0, weight=1)
+    tabs_card.grid_columnconfigure(0, weight=1)
 
     nb = ttk.Notebook(tabs_card)
-    nb.grid(row=0, column=0)
+    nb.grid(row=0, column=0, sticky="nsew")
 
     dash_tab = ttk.Frame(nb)
     ident_tab = ttk.Frame(nb)
     slots_tab = ttk.Frame(nb)
     profile_tab = ttk.Frame(nb)
+    
+    # Configure tabs to expand
+    for tab in (dash_tab, ident_tab, slots_tab, profile_tab):
+        tab.grid_rowconfigure(0, weight=1)
+        tab.grid_columnconfigure(0, weight=1)
 
     nb.add(dash_tab, text="Dashboard")
     nb.add(ident_tab, text="Vehicle Identification")

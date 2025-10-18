@@ -16,22 +16,24 @@ def render(parent, on_logout, current_user=None):
 
     wrapper = ttk.Frame(parent)
     wrapper.grid(row=0, column=0, sticky="nsew")
-    wrapper.grid_columnconfigure(0, weight=0)
-    wrapper.grid_columnconfigure(1, weight=1)
+    wrapper.grid_columnconfigure(0, weight=0)  # Sidebar fixed width
+    wrapper.grid_columnconfigure(2, weight=1)  # Content area expands
     wrapper.grid_rowconfigure(0, weight=1)
 
     uid = (current_user or {}).get('id') or 0
     name = (current_user or {}).get('full_name', 'Student')
 
     # Sidebar
-    sidebar = ttk.Frame(wrapper)
+    sidebar = ttk.Frame(wrapper, width=180)  # Set width directly in constructor
     sidebar.grid(row=0, column=0, sticky="nsw", padx=(16, 0), pady=16)
+    sidebar.grid_propagate(False)  # Prevent grid from overriding width
+
     ttk.Label(sidebar, text="Campus Parking").grid(row=0, column=0, sticky="w", pady=(0, 16))
     nav_state = {"active": "dashboard"}
 
     # Vertical divider between sidebar and page
     divider = ttk.Separator(wrapper, orient='vertical')
-    divider.grid(row=0, column=1, sticky='ns', padx=16, pady=8)
+    divider.grid(row=0, column=1, sticky='ns', padx=24, pady=16)
 
     # Main content wrapper
     content = ttk.Frame(wrapper)
@@ -46,7 +48,9 @@ def render(parent, on_logout, current_user=None):
     page_bg.grid_rowconfigure(0, weight=1)
     # Inner page with gutters
     page = tk.Frame(page_bg, bg="#ffffff")
-    page.grid(row=0, column=0, sticky="nsew", padx=24, pady=24)
+    page.grid(row=0, column=0, sticky="nsew", padx=24, pady=(0, 24))  # Remove top padding
+    page.grid_columnconfigure(0, weight=1)
+    page.grid_rowconfigure(0, weight=1)
 
     # Helper: card
     def card(parent, title: str | None = None):
@@ -59,6 +63,8 @@ def render(parent, on_logout, current_user=None):
     view_profile = tk.Frame(page, bg="#ffffff")
     for v in (view_dashboard, view_slot, view_profile):
         v.grid(row=0, column=0, sticky="nsew")
+        v.grid_columnconfigure(0, weight=1)
+        v.grid_rowconfigure(0, weight=0)  # Don't expand vertically to push content to top
         v.grid_remove()
 
     # Sidebar buttons
@@ -85,7 +91,7 @@ def render(parent, on_logout, current_user=None):
     heading = ttk.Label(view_dashboard, text=f"Welcome, {name}")
     heading.configure(font=("Segoe UI Semibold", 16))
     heading.grid(row=0, column=0, sticky="w", pady=(0, 8))
-    ttk.Label(view_dashboard, text="Manage your parking and profile").grid(row=1, column=0, sticky="w", pady=(0, 20))
+    ttk.Label(view_dashboard, text="Manage your parking and profile").grid(row=1, column=0, sticky="w", pady=(12, 16))  # 12px gap
 
     kpis = ttk.Frame(view_dashboard)
     kpis.grid(row=2, column=0, sticky="w")
@@ -130,8 +136,8 @@ def render(parent, on_logout, current_user=None):
     # My Slot view
     title_slot = ttk.Label(view_slot, text="My Parking Slot")
     title_slot.configure(font=("Segoe UI Semibold", 16))
-    title_slot.grid(row=0, column=0, sticky="w", pady=(0, 8))
-    ttk.Label(view_slot, text="Your current parking information").grid(row=1, column=0, sticky="w", pady=(0, 20))
+    title_slot.grid(row=0, column=0, sticky="w", pady=(0, 8))  # Align with Dashboard button height
+    ttk.Label(view_slot, text="Your current parking information").grid(row=1, column=0, sticky="w", pady=(12, 16))  # 12px gap
 
     slot_card = card(view_slot)
     slot_card.grid(row=2, column=0, sticky="ew", pady=(0, 20))
@@ -159,8 +165,8 @@ def render(parent, on_logout, current_user=None):
     # Profile view with vehicles management
     title_profile = ttk.Label(view_profile, text="Profile")
     title_profile.configure(font=("Segoe UI Semibold", 16))
-    title_profile.grid(row=0, column=0, sticky="w", pady=(0, 8))
-    ttk.Label(view_profile, text="Your account information").grid(row=1, column=0, sticky="w", pady=(0, 20))
+    title_profile.grid(row=0, column=0, sticky="w", pady=(0, 8))  # Align with Dashboard button height
+    ttk.Label(view_profile, text="Your account information").grid(row=1, column=0, sticky="w", pady=(12, 16))  # 12px gap
     profile_card = card(view_profile)
     profile_card.grid(row=2, column=0, sticky="ew")
     ttk.Label(profile_card, text=name).grid(row=0, column=0, padx=16, pady=(16, 8), sticky="w")
