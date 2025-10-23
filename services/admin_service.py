@@ -43,7 +43,7 @@ class AdminService:
         cur = self.conn.cursor(dictionary=True)
         cur.execute(
             """
-            SELECT v.id, u.id AS user_id, u.full_name, u.email, v.id_image_url, v.profile_image_url, v.status
+            SELECT v.id, u.id AS user_id, u.full_name, u.email, u.college_id, v.id_image_url, v.profile_image_url, v.status, u.created_at
             FROM verifications v JOIN users u ON u.id=v.user_id
             WHERE v.status='pending' ORDER BY v.id DESC
             """,
@@ -105,6 +105,88 @@ class AdminService:
                 """,
                 (admin_user_id, note, flag_id),
             )
+            self.conn.commit()
+        except Exception:
+            self.conn.rollback()
+            raise
+        finally:
+            cur.close()
+
+    def get_user_details_for_verification(self, user_id: int) -> dict:
+        cur = self.conn.cursor(dictionary=True)
+        try:
+            # Get user basic info (users table has created_at)
+            cur.execute("""
+                SELECT u.id, u.full_name, u.college_id, u.email, u.created_at
+                FROM users u WHERE u.id=%s
+            """, (user_id,))
+            user_data = cur.fetchone() or {}
+            
+            # Get verification images (verifications table has no created_at)
+            cur.execute("""
+                SELECT profile_image_url, id_image_url, status, reviewed_at
+                FROM verifications WHERE user_id=%s
+            """, (user_id,))
+            verification_data = cur.fetchone() or {}
+            
+            # Get registered vehicles (vehicles table has no created_at)
+            cur.execute("""
+                SELECT plate_number, is_active
+                FROM vehicles WHERE user_id=%s
+            """, (user_id,))
+            vehicles = cur.fetchall() or []
+            
+            # Combine all data
+            result = {
+                **user_data,
+                **verification_data,
+                'vehicles': vehicles
+            }
+            return result
+        finally:
+            cur.close()
+
+    def approve_verification(self, user_id: int, admin_user_id: int) -> None:
+        cur = self.conn.cursor()
+        try:
+            # Update verification status
+            cur.execute("""
+                UPDATE verifications 
+                SET status='approved', reviewer_id=%s, reviewed_at=NOW()
+                WHERE user_id=%s
+            """, (admin_user_id, user_id))
+            
+            # Update user profile verification status
+            cur.execute("""
+                UPDATE users 
+                SET is_profile_verified=TRUE 
+                WHERE id=%s
+            """, (user_id,))
+            
+            self.conn.commit()
+        except Exception:
+            self.conn.rollback()
+            raise
+        finally:
+            cur.close()
+
+    def reject_verification(self, user_id: int, admin_user_id: int, reason: str = None) -> None:
+        cur = self.conn.cursor()
+        try:
+            # Update verification status
+            cur.execute("""
+                UPDATE verifications 
+                SET status='rejected', reviewer_id=%s, reviewed_at=NOW(), notes=%s
+                WHERE user_id=%s
+            """, (admin_user_id, reason, user_id))
+            
+            # Ensure user profile is not verified
+            cur.execute("""
+                UPDATE users 
+                SET is_profile_verified=FALSE 
+                WHERE id=%s
+            """, (user_id,))
+            
             self.conn.commit()
         except Exception:
             self.conn.rollback()

@@ -189,7 +189,7 @@ def render(parent, on_logout, current_user=None):
 
     # Tabs container
     tabs_card = ttk.Frame(wrapper)
-    tabs_card.grid(row=1, column=0, padx=24, pady=(4, 12), sticky="nsew")
+    tabs_card.grid(row=1, column=0, padx=24, pady=(8, 12), sticky="nsew")  # 8px gap from topbar
     tabs_card.grid_rowconfigure(0, weight=1)
     tabs_card.grid_columnconfigure(0, weight=1)
 

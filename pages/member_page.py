@@ -48,7 +48,7 @@ def render(parent, on_logout, current_user=None):
     page_bg.grid_rowconfigure(0, weight=1)
     # Inner page with gutters
     page = tk.Frame(page_bg, bg="#ffffff")
-    page.grid(row=0, column=0, sticky="nsew", padx=24, pady=(0, 24))  # Remove top padding
+    page.grid(row=0, column=0, sticky="nsew", padx=24, pady=(8, 24))  # 8px gap from top
     page.grid_columnconfigure(0, weight=1)
     page.grid_rowconfigure(0, weight=1)
 
@@ -162,28 +162,163 @@ def render(parent, on_logout, current_user=None):
     lbl_tile_duration = ttk.Label(tile_duration, text="–")
     lbl_tile_duration.grid(row=1, column=0, padx=12, pady=(0, 12))
 
-    # Profile view with vehicles management
+    # Profile view with enhanced verification features
     title_profile = ttk.Label(view_profile, text="Profile")
     title_profile.configure(font=("Segoe UI Semibold", 16))
     title_profile.grid(row=0, column=0, sticky="w", pady=(0, 8))  # Align with Dashboard button height
-    ttk.Label(view_profile, text="Your account information").grid(row=1, column=0, sticky="w", pady=(12, 16))  # 12px gap
-    profile_card = card(view_profile)
-    profile_card.grid(row=2, column=0, sticky="ew")
-    ttk.Label(profile_card, text=name).grid(row=0, column=0, padx=16, pady=(16, 8), sticky="w")
-    email = (current_user or {}).get('email', '—')
-    college_id = (current_user or {}).get('college_id', '—')
-    ttk.Label(profile_card, text=f"Email\n{email}").grid(row=1, column=0, padx=16, pady=6, sticky="w")
-    ttk.Label(profile_card, text=f"College ID\n{college_id}").grid(row=2, column=0, padx=16, pady=6, sticky="w")
-
-    vehicles_profile = card(profile_card)
-    vehicles_profile.grid(row=3, column=0, padx=12, pady=(12, 16), sticky="ew")
-    ttk.Label(vehicles_profile, text="Registered Vehicles").grid(row=0, column=0, padx=12, pady=(12, 0), sticky="w")
+    ttk.Label(view_profile, text="Complete your profile for verification").grid(row=1, column=0, sticky="w", pady=(12, 16))  # 12px gap
+    
+    # Main profile form
+    profile_form = card(view_profile, title="Profile Information")
+    profile_form.grid(row=2, column=0, sticky="ew", pady=(0, 16))
+    
+    # Form variables
+    full_name_var = tk.StringVar()
+    college_id_var = tk.StringVar()
+    email_var = tk.StringVar()
+    profile_image_path = tk.StringVar()
+    college_id_image_path = tk.StringVar()
+    
+    # Load existing data
+    profile_data = _member.get_profile_data(uid)
+    full_name_var.set(profile_data.get('full_name', ''))
+    college_id_var.set(profile_data.get('college_id', ''))
+    email_var.set(profile_data.get('email', ''))
+    
+    # Image preview variables
+    profile_image_label = None
+    college_id_image_label = None
+    
+    # Form fields
+    form_fields = ttk.Frame(profile_form)
+    form_fields.grid(row=0, column=0, padx=16, pady=16, sticky="ew")
+    
+    # Full Name
+    ttk.Label(form_fields, text="Full Name").grid(row=0, column=0, sticky="w", pady=4)
+    ttk.Entry(form_fields, textvariable=full_name_var, width=30).grid(row=0, column=1, padx=(8, 0), pady=4, sticky="w")
+    
+    # College ID
+    ttk.Label(form_fields, text="College ID").grid(row=1, column=0, sticky="w", pady=4)
+    ttk.Entry(form_fields, textvariable=college_id_var, width=30).grid(row=1, column=1, padx=(8, 0), pady=4, sticky="w")
+    
+    # Email
+    ttk.Label(form_fields, text="Email").grid(row=2, column=0, sticky="w", pady=4)
+    ttk.Entry(form_fields, textvariable=email_var, width=30).grid(row=2, column=1, padx=(8, 0), pady=4, sticky="w")
+    
+    # Image upload section
+    images_section = card(profile_form, title="Verification Images")
+    images_section.grid(row=1, column=0, sticky="ew", pady=(0, 16))
+    
+    images_container = ttk.Frame(images_section)
+    images_container.grid(row=0, column=0, padx=16, pady=16, sticky="ew")
+    
+    # Profile Image Upload
+    profile_section = ttk.Frame(images_container)
+    profile_section.grid(row=0, column=0, padx=(0, 16), pady=8, sticky="w")
+    ttk.Label(profile_section, text="Profile Image").grid(row=0, column=0, sticky="w", pady=(0, 4))
+    
+    profile_preview_frame = ttk.Frame(profile_section)
+    profile_preview_frame.grid(row=1, column=0, pady=4)
+    profile_image_label = ttk.Label(profile_preview_frame, text="No image", width=15, relief="sunken")
+    profile_image_label.grid(row=0, column=0, padx=(0, 8))
+    
+    def _upload_profile_image():
+        path = filedialog.askopenfilename(
+            title="Select Profile Image",
+            filetypes=[("Images", "*.png;*.jpg;*.jpeg;*.bmp;*.webp")]
+        )
+        if path:
+            try:
+                _member.upload_profile_image(uid, path)
+                profile_image_path.set(path)
+                # Update preview
+                from PIL import Image, ImageTk
+                img = Image.open(path)
+                img = img.resize((100, 100), Image.LANCZOS)
+                photo = ImageTk.PhotoImage(img)
+                profile_image_label.configure(image=photo, text="")
+                profile_image_label.image = photo  # Keep reference
+                messagebox.showinfo("Success", "Profile image uploaded successfully!")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to upload image: {str(e)}")
+    
+    ttk.Button(profile_section, text="Upload Profile Image", command=_upload_profile_image).grid(row=2, column=0, pady=4)
+    
+    # College ID Image Upload
+    college_section = ttk.Frame(images_container)
+    college_section.grid(row=0, column=1, padx=(16, 0), pady=8, sticky="w")
+    ttk.Label(college_section, text="College ID Image").grid(row=0, column=0, sticky="w", pady=(0, 4))
+    
+    college_preview_frame = ttk.Frame(college_section)
+    college_preview_frame.grid(row=1, column=0, pady=4)
+    college_id_image_label = ttk.Label(college_preview_frame, text="No image", width=15, relief="sunken")
+    college_id_image_label.grid(row=0, column=0, padx=(0, 8))
+    
+    def _upload_college_id_image():
+        path = filedialog.askopenfilename(
+            title="Select College ID Image",
+            filetypes=[("Images", "*.png;*.jpg;*.jpeg;*.bmp;*.webp")]
+        )
+        if path:
+            try:
+                _member.upload_college_id_image(uid, path)
+                college_id_image_path.set(path)
+                # Update preview
+                from PIL import Image, ImageTk
+                img = Image.open(path)
+                img = img.resize((100, 100), Image.LANCZOS)
+                photo = ImageTk.PhotoImage(img)
+                college_id_image_label.configure(image=photo, text="")
+                college_id_image_label.image = photo  # Keep reference
+                messagebox.showinfo("Success", "College ID image uploaded successfully!")
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to upload image: {str(e)}")
+    
+    ttk.Button(college_section, text="Upload College ID", command=_upload_college_id_image).grid(row=2, column=0, pady=4)
+    
+    # Action buttons
+    buttons_frame = ttk.Frame(profile_form)
+    buttons_frame.grid(row=2, column=0, padx=16, pady=(0, 16), sticky="w")
+    
+    def _save_profile():
+        try:
+            _member.update_profile_data(
+                uid, 
+                full_name_var.get().strip(), 
+                college_id_var.get().strip(), 
+                email_var.get().strip()
+            )
+            messagebox.showinfo("Success", "Profile updated successfully!")
+            # Enable verification button
+            verify_btn.config(state="normal")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to save profile: {str(e)}")
+    
+    def _submit_for_verification():
+        try:
+            _member.submit_for_verification(uid)
+            messagebox.showinfo("Success", "Profile submitted for verification! Admin will review your documents.")
+            refresh_dashboard()  # Update verification status
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to submit for verification: {str(e)}")
+    
+    ttk.Button(buttons_frame, text="Save Profile", style="Role.TButton", command=_save_profile).grid(row=0, column=0, padx=(0, 8))
+    verify_btn = ttk.Button(buttons_frame, text="Send for Verification", style="Role.TButton", command=_submit_for_verification, state="disabled")
+    verify_btn.grid(row=0, column=1)
+    
+    # Registered Vehicles section
+    vehicles_profile = card(profile_form, title="Registered Vehicles")
+    vehicles_profile.grid(row=3, column=0, sticky="ew")
+    
+    ttk.Label(vehicles_profile, text="Your registered vehicles").grid(row=0, column=0, padx=16, pady=(12, 8), sticky="w")
     vehicles_profile_list = ttk.Frame(vehicles_profile)
-    vehicles_profile_list.grid(row=1, column=0, padx=12, pady=8, sticky="w")
+    vehicles_profile_list.grid(row=1, column=0, padx=16, pady=8, sticky="w")
+    
     add_row = ttk.Frame(vehicles_profile)
-    add_row.grid(row=2, column=0, padx=12, pady=(0, 12), sticky="w")
+    add_row.grid(row=2, column=0, padx=16, pady=(0, 16), sticky="w")
     new_plate = tk.StringVar(value="")
     ttk.Entry(add_row, textvariable=new_plate, width=20).grid(row=0, column=0, padx=(0, 8))
+    
     def _add_vehicle_profile():
         if not new_plate.get():
             return
@@ -194,6 +329,7 @@ def render(parent, on_logout, current_user=None):
             refresh_profile()
         except Exception as e:
             messagebox.showerror("Vehicles", str(e))
+    
     ttk.Button(add_row, text="Add Vehicle", style="Role.TButton", command=_add_vehicle_profile).grid(row=0, column=1)
 
     # Refresh helpers
@@ -235,11 +371,32 @@ def render(parent, on_logout, current_user=None):
             lbl_tile_duration.config(text="–")
 
     def refresh_profile():
+        # Refresh vehicles list
         for w in vehicles_profile_list.winfo_children():
             w.destroy()
         rows = _member.list_vehicles(uid)
         for i, v in enumerate(rows):
             ttk.Label(vehicles_profile_list, text=v['plate_number']).grid(row=i, column=0, padx=8, pady=2, sticky="w")
+        
+        # Load existing images if any
+        try:
+            images = _member.get_verification_images(uid)
+            if images.get('profile_image_url'):
+                from PIL import Image, ImageTk
+                img = Image.open(images['profile_image_url'])
+                img = img.resize((100, 100), Image.LANCZOS)
+                photo = ImageTk.PhotoImage(img)
+                profile_image_label.configure(image=photo, text="")
+                profile_image_label.image = photo
+            if images.get('id_image_url'):
+                from PIL import Image, ImageTk
+                img = Image.open(images['id_image_url'])
+                img = img.resize((100, 100), Image.LANCZOS)
+                photo = ImageTk.PhotoImage(img)
+                college_id_image_label.configure(image=photo, text="")
+                college_id_image_label.image = photo
+        except Exception:
+            pass  # Images might not exist yet
 
     # Initial view
     set_active("dashboard")
