@@ -39,6 +39,30 @@ class ParkingService:
         cur.close()
         return int(n or 0)
 
+    def list_active_parking_events(self) -> list[dict]:
+        """Get all active parking events with user and slot details"""
+        cur = self.conn.cursor(dictionary=True)
+        try:
+            cur.execute("""
+                SELECT 
+                    pe.id as parking_id,
+                    v.plate_number,
+                    u.full_name as user_name,
+                    s.code as slot_code,
+                    pe.entry_time,
+                    pe.exit_time
+                FROM parking_events pe
+                JOIN vehicles v ON v.id = pe.vehicle_id
+                JOIN users u ON u.id = v.user_id
+                JOIN slots s ON s.id = pe.slot_id
+                WHERE pe.status = 'active'
+                ORDER BY pe.entry_time DESC
+            """)
+            rows = cur.fetchall() or []
+            return rows
+        finally:
+            cur.close()
+
     # Vehicle lookup
     def find_vehicle(self, plate: str) -> Optional[dict]:
         cur = self.conn.cursor(dictionary=True)

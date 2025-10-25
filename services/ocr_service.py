@@ -12,7 +12,7 @@ class PlateOCR:
         self._ocr = None
         if PaddleOCR is not None:
             try:
-                self._ocr = PaddleOCR(lang="en", use_angle_cls=True, use_gpu=False)
+                self._ocr = PaddleOCR(lang="en", use_textline_orientation=True)
             except Exception:
                 self._ocr = None
 
@@ -28,11 +28,16 @@ class PlateOCR:
             plate = m.group(0) if m else cleaned[:10]
             return plate, 0.40
 
-        result = self._ocr.ocr(image_path, cls=True)
+        result = self._ocr.ocr(image_path)
         candidates: list[tuple[str, float]] = []
-        for line in result or []:
-            for _, (text, conf) in line:
-                candidates.append((str(text), float(conf)))
+        
+        # Handle new PaddleOCR format: list of dicts with rec_texts and rec_scores
+        for page_result in result or []:
+            if isinstance(page_result, dict) and 'rec_texts' in page_result and 'rec_scores' in page_result:
+                texts = page_result.get('rec_texts', [])
+                scores = page_result.get('rec_scores', [])
+                for text, score in zip(texts, scores):
+                    candidates.append((str(text), float(score)))
         if not candidates:
             return "", 0.0
         raw, conf = max(candidates, key=lambda x: x[1])
