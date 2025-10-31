@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from services.auth_service import AuthService
 from PIL import Image, ImageTk, ImageFilter, ImageEnhance, ImageOps
+from pages.auth_pages import AuthPage
 import os
 
 
@@ -67,8 +68,24 @@ class App(tk.Tk):
         self.show_landing()
 
     def clear(self):
-        for child in self.container.winfo_children():
-            child.destroy()
+        # Clean up auth page first if exists
+        if hasattr(self, "auth_page") and self.auth_page is not None:
+            try:
+                self.auth_page.destroy()
+            except Exception:
+                pass
+            self.auth_page = None
+        
+        # Clear container children
+        try:
+            for child in list(self.container.winfo_children()):
+                try:
+                    child.destroy()
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        
         # Also clear any landing grid placed on the background canvas
         if hasattr(self, "_landing_grid") and self._landing_grid is not None:
             try:
@@ -76,6 +93,7 @@ class App(tk.Tk):
             except Exception:
                 pass
             self._landing_grid = None
+        
         # Clear canvas drawn landing artifacts
         if hasattr(self, "_landing_items") and self._landing_items:
             for item in self._landing_items:
@@ -106,123 +124,24 @@ class App(tk.Tk):
         self._mode = "auth"
         # Ensure landing will not redraw while in auth
         self._landing_roles = []
-        # Show container for auth
-        self.container.place(relx=0.5, rely=0.10, anchor="n")
-        display_role = {
-            "guard": "Security Guard",
-            "member": "Campus Student",
-            "admin": "Campus Management",
-        }.get(role, role.title())
-
-        # Build a tidy auth layout with only the selected role image at the top
-        card = ttk.Frame(self.container)
-        card.grid(row=0, column=0, padx=24, pady=12)
-
-        # Back button
-        back_bar = ttk.Frame(card)
-        back_bar.grid(row=0, column=0, sticky="w")
-        ttk.Button(back_bar, text="← Back", command=self.show_landing).pack(pady=(0, 4))
-
-        # Role image header
-        img_path = {
-            "guard": os.path.join(self._assets_dir, "security_guard-removebg-preview.png"),
-            "member": os.path.join(self._assets_dir, "student-removebg-preview.png"),
-            "admin": os.path.join(self._assets_dir, "management-removebg-preview.png"),
-        }.get(role, "")
-        self._auth_role_img = self._load_role_image(img_path, size=(140, 140))
-        img_lbl = tk.Label(card, image=self._auth_role_img, bd=0, highlightthickness=0)
-        img_lbl.grid(row=1, column=0, pady=(4, 6))
-
-        title = ttk.Label(card, text=f"{display_role} - Login / Register")
-        title.configure(font=("Segoe UI Semibold", 13))
-        title.grid(row=2, column=0, pady=(0, 8))
-
-        # Form container with notebook
-        form_wrap = ttk.Frame(card)
-        form_wrap.grid(row=3, column=0)
-        nb = ttk.Notebook(form_wrap)
-        nb.pack(fill=tk.BOTH, expand=True)
-
-        login_frame = ttk.Frame(nb)
-        register_frame = ttk.Frame(nb)
-        nb.add(login_frame, text="Login")
-        nb.add(register_frame, text="Register")
-
-        # Login tab
-        ttk.Label(login_frame, text="Email").grid(row=0, column=0, sticky=tk.W, padx=8, pady=8)
-        email_var = tk.StringVar()
-        ttk.Entry(login_frame, textvariable=email_var, width=32).grid(row=0, column=1, padx=8, pady=8)
-
-        ttk.Label(login_frame, text="Password").grid(row=1, column=0, sticky=tk.W, padx=8, pady=8)
-        password_var = tk.StringVar()
-        ttk.Entry(login_frame, textvariable=password_var, show="*", width=32).grid(row=1, column=1, padx=8, pady=8)
-
-        def on_login():
-            user = self.auth.login(email_var.get().strip(), password_var.get())
-            if not user:
-                messagebox.showerror("Login failed", "Invalid credentials")
-                return
-            
-            # Special admin access restriction
-            if role == "admin":
-                admin_email = "ravi.abhinavyadav@gmail.com"
-                if user["email"] != admin_email:
-                    messagebox.showerror("Access Denied", f"Admin access is restricted to {admin_email} only. Other campus employees can register but won't have admin privileges.")
-                    return
-                # Verify user has admin role for the restricted email
-                if user["role"] != "admin":
-                    messagebox.showerror("Login failed", "Invalid role for admin access")
-                    return
-            else:
-                # For guard and member roles, check role match
-                if user["role"] != role:
-                    messagebox.showerror("Login failed", "Invalid credentials or role mismatch")
-                    return
-            
-            self.current_user = user
-            messagebox.showinfo("Success", f"Welcome {user['full_name']}")
-            # Route to role dashboard
-            self.show_dashboard(user["role"]) 
-
-        ttk.Button(login_frame, text="Login", style="Role.TButton", command=on_login).grid(row=2, column=0, columnspan=2, pady=12)
-
-        # Register tab
-        reg_fields = {
-            "College ID": tk.StringVar(),
-            "Full Name": tk.StringVar(),
-            "Email": tk.StringVar(),
-            "Password": tk.StringVar(),
-        }
-
-        for i, (label, var) in enumerate(reg_fields.items()):
-            ttk.Label(register_frame, text=label).grid(row=i, column=0, sticky=tk.W, padx=8, pady=8)
-            show = "*" if label == "Password" else None
-            ttk.Entry(register_frame, textvariable=var, show=show, width=32).grid(row=i, column=1, padx=8, pady=8)
-
-        def on_register():
-            try:
-                # Check for admin role restriction during registration
-                if role == "admin":
-                    admin_email = "ravi.abhinavyadav@gmail.com"
-                    if reg_fields["Email"].get().strip() != admin_email:
-                        messagebox.showwarning("Admin Registration Restricted", 
-                                             f"Admin access is restricted to {admin_email} only. "
-                                             "Other campus employees can register with different roles.")
-                        return
-                
-                self.auth.register(
-                    reg_fields["College ID"].get().strip(),
-                    reg_fields["Full Name"].get().strip(),
-                    reg_fields["Email"].get().strip(),
-                    reg_fields["Password"].get(),
-                    role,
-                )
-                messagebox.showinfo("Registered", "Registration successful. You can now login.")
-                nb.select(0)
-            except Exception as e:
-                messagebox.showerror("Error", str(e))
-
-        ttk.Button(register_frame, text="Register", style="Role.TButton", command=on_register).grid(row=len(reg_fields), column=0, columnspan=2, pady=12)
+        
+        # Show container for auth - full screen
+        self.container.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0, anchor="nw")
+        
+        # Create auth page with CustomTkinter
+        self.auth_page = AuthPage(
+            parent=self.container,
+            role=role,
+            auth_service=self.auth,
+            on_back=self.show_landing,
+            on_success=lambda user: self.handle_auth_success(user, role)
+        )
+        
+    def handle_auth_success(self, user, role):
+        """Handle successful authentication"""
+        self.current_user = user
+        # Route to role dashboard
+        self.show_dashboard(user["role"])
 
     def _render_background(self):
         w = max(self.winfo_width(), 1)
