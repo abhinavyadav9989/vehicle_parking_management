@@ -1,11 +1,17 @@
 """Campus member dashboard view."""
 
 from __future__ import annotations
+
 from datetime import datetime
+from pathlib import Path
 from typing import Any
+
 import customtkinter as ctk
+from PIL import Image
+
 from services.member_service import MemberService
 
+ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 _member_service = MemberService()
 
 def render(parent, user=None, on_logout=None):
@@ -46,8 +52,8 @@ def _build_sidebar(parent, on_logout) -> ctk.CTkFrame:
     sidebar.grid_rowconfigure((0, 1, 2, 3, 4, 5), weight=0)
     sidebar.grid_rowconfigure(7, weight=1)
 
-    nav_title_font = ctk.CTkFont(family="Inter", size=16, weight="bold")
-    nav_font = ctk.CTkFont(family="Inter", size=15)
+    nav_title_font = ctk.CTkFont(family="Inter", size=14, weight="bold")
+    nav_font = ctk.CTkFont(family="Inter", size=13)
 
     ctk.CTkLabel(
         sidebar,
@@ -59,27 +65,41 @@ def _build_sidebar(parent, on_logout) -> ctk.CTkFrame:
 
     nav_buttons: dict[str, ctk.CTkButton] = {}
 
-    def _make_button(text: str, view_name: str, row_index: int, primary: bool = False) -> ctk.CTkButton:
+    def _make_button(text: str, view_name: str, row_index: int, primary: bool = False, icon: str | None = None) -> ctk.CTkButton:
+        image = None
+        if icon:
+            path = ASSETS_DIR / icon
+            if path.exists():
+                img = Image.open(path)
+                image = ctk.CTkImage(light_image=img, dark_image=img.copy(), size=(20, 20))
         btn = ctk.CTkButton(
             sidebar,
             text=text,
-            width=140,
-            height=46,
+            image=image,
+            compound="left",
+            width=150,
+            height=42,
             fg_color="#ffffff" if primary else "transparent",
             hover_color="#f3f4ff" if primary else "#dbe4ff",
             text_color="#2563eb" if primary else "#111827",
             font=nav_title_font if primary else nav_font,
             corner_radius=18,
         )
-        btn.grid(row=row_index, column=0, padx=20, pady=6)
+        btn.grid(row=row_index, column=0, padx=18, pady=6, sticky="ew")
         nav_buttons[view_name] = btn
         return btn
 
-    _make_button("Dashboard", "dashboard", 1, primary=True)
-    _make_button("My Slots", "slots", 2)
-    _make_button("Profile", "profile", 3)
+    _make_button("Dashboard", "dashboard", 1, primary=True, icon="dashboard_1828765.png")
+    _make_button("My Slots", "slots", 2, icon="jeep_715882.png")
+    _make_button("Profile", "profile", 3, icon="profile.png")
 
     if on_logout is not None:
+        logout_icon = None
+        logout_path = ASSETS_DIR / "logout.png"
+        if logout_path.exists():
+            img = Image.open(logout_path)
+            logout_icon = ctk.CTkImage(light_image=img, dark_image=img.copy(), size=(18, 18))
+
         ctk.CTkButton(
             sidebar,
             text="Logout",
@@ -90,6 +110,8 @@ def _build_sidebar(parent, on_logout) -> ctk.CTkFrame:
             text_color="#2563eb",
             font=nav_title_font,
             corner_radius=18,
+            image=logout_icon,
+            compound="left",
             command=on_logout,
         ).grid(row=7, column=0, padx=20, pady=24, sticky="s")
 
@@ -118,9 +140,9 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
     frame.grid_rowconfigure(1, weight=1)
 
     header_fonts = {
-        "title": ctk.CTkFont(family="Inter", size=26, weight="bold"),
-        "subtitle": ctk.CTkFont(family="Inter", size=16, weight="bold"),
-        "meta": ctk.CTkFont(family="Inter", size=13),
+        "title": ctk.CTkFont(family="Inter", size=24, weight="bold"),
+        "subtitle": ctk.CTkFont(family="Inter", size=14, weight="bold"),
+        "meta": ctk.CTkFont(family="Inter", size=12),
     }
 
     user_name = (user or {}).get("full_name", "Member")
@@ -180,6 +202,7 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
         title="Registered Vehicles",
         value=str(snapshot.get("registered_count", 0)),
         bg="#e7f1ff",
+        icon="jeep_715882.png",
     )
 
     verification_status = snapshot.get("verification_status", "pending").title()
@@ -196,6 +219,7 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
         title="Verification Status",
         value=verification_status,
         bg=verification_bg,
+        icon="verified.png",
     )
 
     _metric_card(
@@ -205,6 +229,7 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
         title="Current Status",
         value=snapshot.get("parking_status", "Not Parked"),
         bg="#e7f1ff",
+        icon="clock_4270137.png",
     )
 
     status_grid = ctk.CTkFrame(body, fg_color="#ffffff")
@@ -279,17 +304,30 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
     return frame
 
 
-def _metric_card(parent, *, row: int, column: int, title: str, value: Any, bg: str) -> ctk.CTkFrame:
+def _metric_card(parent, *, row: int, column: int, title: str, value: Any, bg: str, icon: str | None = None) -> ctk.CTkFrame:
     card = ctk.CTkFrame(parent, fg_color=bg, corner_radius=20, width=220, height=170)
     card.grid(row=row, column=column, padx=8, pady=8, sticky="nsew")
     card.grid_propagate(False)
 
+    icon_image = None
+    if icon:
+        icon_path = ASSETS_DIR / icon
+        if icon_path.exists():
+            img = Image.open(icon_path)
+            icon_image = ctk.CTkImage(light_image=img, dark_image=img.copy(), size=(24, 24))
+
+    title_frame = ctk.CTkFrame(card, fg_color="transparent")
+    title_frame.pack(pady=(16, 6))
+
+    if icon_image:
+        ctk.CTkLabel(title_frame, text="", image=icon_image).pack(side="left", padx=(0, 6))
+
     ctk.CTkLabel(
-        card,
+        title_frame,
         text=title,
         font=ctk.CTkFont(family="Inter", size=14),
         text_color="#1f2937",
-    ).pack(pady=(20, 10))
+    ).pack(side="left")
 
     ctk.CTkLabel(
         card,
