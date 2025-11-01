@@ -69,7 +69,7 @@ def _mk_sbar(parent, on_logout) -> ctk.CTkFrame:
     icon_map = {
         "dashboard": _get_icon("dashboard.png", (20, 20)),
         "slots": _get_icon("jeep_715882.png", (20, 20)),
-        "profile": _get_icon("profile.png", (20, 20)),
+        "profile": _get_icon("profile.png", (25, 25)),
     }
 
     def mk_btn(text: str, view_name: str, row_index: int, primary: bool = False) -> ctk.CTkButton:
@@ -79,12 +79,12 @@ def _mk_sbar(parent, on_logout) -> ctk.CTkFrame:
             image=icon_map.get(view_name),
             compound="left",
             width=150,
-            height=42,
+            height=44,
             fg_color="#ffffff" if primary else "transparent",
             hover_color="#f3f4ff" if primary else "#dbe4ff",
-            text_color="#2563eb" if primary else "#111827",
+            text_color="#2563eb" if primary else "#151F30",
             font=nav_title_font if primary else nav_font,
-            corner_radius=18,
+            corner_radius=20,
         )
         btn.grid(row=row_index, column=0, padx=18, pady=6, sticky="ew")
         nav_buttons[view_name] = btn
@@ -102,10 +102,10 @@ def _mk_sbar(parent, on_logout) -> ctk.CTkFrame:
             width=140,
             height=40,
             fg_color="transparent",
-            hover_color="#fee2e2",
+        hover_color="#D9FAE7",
             text_color="#2563eb",
             font=nav_title_font,
-            corner_radius=18,
+            corner_radius=20,
             image=logout_icon,
             compound="left",
             command=on_logout,
@@ -116,7 +116,7 @@ def _mk_sbar(parent, on_logout) -> ctk.CTkFrame:
             primary = key == view
             btn.configure(
                 fg_color="#ffffff" if primary else "transparent",
-                text_color="#2563eb" if primary else "#111827",
+                text_color="#2563eb" if primary else "#151F30",
             )
 
     def config_nav(callback):
@@ -151,7 +151,7 @@ def _mk_dashboard_vw(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFrame:
         header,
         text=f"Welcome {user_name}",
         font=header_font["title"],
-        text_color="#111827",
+        text_color="#151F30",
     ).grid(row=0, column=0, sticky="w")
 
     date_time_fm = ctk.CTkFrame(header, fg_color="#ffffff")
@@ -161,7 +161,7 @@ def _mk_dashboard_vw(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFrame:
         date_time_fm,
         text="Date :",
         font=header_font["meta"],
-        text_color="#1f2937",
+        text_color="#2A4E85",
     ).pack(side="left", padx=(0, 6))
     date_lbl = _mk_info_fill(date_time_fm, header_font["meta"], width=140)
 
@@ -169,7 +169,7 @@ def _mk_dashboard_vw(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFrame:
         date_time_fm,
         text="Time :",
         font=header_font["meta"],
-        text_color="#1f2937",
+        text_color="#2A4E85",
     ).pack(side="left", padx=(12, 6))
     time_lbl = _mk_info_fill(date_time_fm, header_font["meta"], width=140)
 
@@ -181,7 +181,7 @@ def _mk_dashboard_vw(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFrame:
         body,
         text="Manage Your Parking and Profile",
         font=header_font["subtitle"],
-        text_color="#1f2937",
+        text_color="#2A4E85",
     ).grid(row=0, column=0, sticky="w", pady=(0, 16))
 
     dashboard_info = _get_snapshot(user)
@@ -263,32 +263,21 @@ def _mk_dashboard_vw(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFrame:
     )
 
     vehicle_fm = ctk.CTkFrame(body, fg_color="#ffffff")
-    vehicle_fm.grid(row=3, column=0, sticky="ew", pady=(8, 0))
+    vehicle_fm.grid(row=3, column=0, sticky="ew", pady=(16, 0))
     vehicle_fm.grid_columnconfigure(0, weight=1)
 
-    ctk.CTkLabel(
-        vehicle_fm,
-        text="Your Vehicles",
-        font=ctk.CTkFont(family="Inter", size=15, weight="bold"),
-        text_color="#1f2937",
-    ).grid(row=0, column=0, sticky="w", pady=(0, 6))
-
     vehicles = dashboard_info.get("vehicles") or []
-    if vehicles:
-        for idx, plate in enumerate(vehicles, start=1):
-            ctk.CTkLabel(
-                vehicle_fm,
-                text=f"• {plate}",
-                font=ctk.CTkFont(family="Inter", size=14),
-                text_color="#111827",
-            ).grid(row=idx, column=0, sticky="w", pady=2)
-    else:
-        ctk.CTkLabel(
-            vehicle_fm,
-            text="No vehicles registered yet.",
-            font=ctk.CTkFont(family="Inter", size=14),
-            text_color="#6b7280",
-        ).grid(row=1, column=0, sticky="w", pady=2)
+    vehicle_text = "\n".join(vehicles) if vehicles else "No vehicles registered yet."
+
+    _mk_kpi_card(
+        vehicle_fm,
+        row=0,
+        column=0,
+        title="Your Vehicles",
+        value=vehicle_text,
+        bg="#e7f1ff",
+        icon=_get_icon("jeep_715882.png", (24, 24)),
+    )
 
     def upd_clock() -> None:
         now = datetime.now()
@@ -324,14 +313,14 @@ def _mk_kpi_card(
         title_frame,
         text=title,
         font=ctk.CTkFont(family="Inter", size=14),
-        text_color="#1f2937",
+        text_color="#2A4E85",
     ).pack(side="left")
 
     ctk.CTkLabel(
         card,
         text=str(value),
         font=ctk.CTkFont(family="Inter", size=22, weight="bold"),
-        text_color="#111827",
+        text_color="#151F30",
     ).pack(pady=(0, 14))
 
     return card
@@ -346,7 +335,7 @@ def _mk_info_fill(parent, font: ctk.CTkFont, width: int = 120) -> ctk.CTkLabel:
         wrapper,
         text="",
         font=font,
-        text_color="#1f2937",
+        text_color="#2A4E85",
     )
     pill.pack(expand=True)
     return pill
@@ -361,14 +350,14 @@ def _mk_placeholder_vw(parent: ctk.CTkFrame, title: str) -> ctk.CTkFrame:
         view,
         text=title,
         font=ctk.CTkFont(family="Inter", size=22, weight="bold"),
-        text_color="#111827",
+        text_color="#151F30",
     ).grid(row=0, column=0, pady=(40, 12))
 
     ctk.CTkLabel(
         view,
         text="Still Building",
         font=ctk.CTkFont(family="Inter", size=18, weight="bold"),
-        text_color="#6b7280",
+        text_color="#656B73",
     ).grid(row=1, column=0)
 
     return view
