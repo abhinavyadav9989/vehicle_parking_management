@@ -1,425 +1,225 @@
-import tkinter as tk
-from tkinter import ttk, messagebox
+import customtkinter as ctk
+
 from services.auth_service import AuthService
-from PIL import Image, ImageTk, ImageFilter, ImageEnhance, ImageOps
-import os
+from pages.auth_pages import AuthPage
 
 
-class App(tk.Tk):
-    def __init__(self):
+class App(ctk.CTk):
+    """Simplified application shell with landing, auth, and dashboard views."""
+
+    def __init__(self) -> None:
         super().__init__()
+        ctk.set_appearance_mode("light")
+        ctk.set_default_color_theme("blue")
+
         self.title("Parking Management System")
-        self.geometry("900x640")
-        self.resizable(True, True)
-        
-        # Maximize window on startup
-        try:
-            self.state('zoomed')  # Windows
-        except:
-            try:
-                self.attributes('-zoomed', True)  # Linux
-            except:
-                pass  # Fallback for other systems
+        self.geometry("900x600")
+        self.resizable(False, False)
 
-        # Theming and subtle glass-like styling
-        style = ttk.Style()
-        try:
-            style.theme_use("clam")
-        except Exception:
-            pass
-        default_font = ("Segoe UI", 11)
-        header_font = ("Segoe UI Semibold", 12)
-        button_font = ("Segoe UI", 11)
-        self.option_add("*Font", default_font)
-
-        style.configure("Glass.TLabelframe", padding=24)
-        style.configure("Glass.TLabelframe.Label", font=header_font)
-        style.configure("Role.TButton", padding=(18, 10), font=button_font)
-        style.map(
-            "Role.TButton",
-            relief=[("pressed", "sunken"), ("active", "raised")],
-        )
+        self.font_title = ctk.CTkFont(family="Inter", size=22, weight="bold")
+        self.font_subtitle = ctk.CTkFont(family="Inter", size=16)
+        self.font_box = ctk.CTkFont(family="Inter", size=16)
+        self.font_footer = ctk.CTkFont(family="Inter", size=14)
 
         self.auth = AuthService()
         self.current_user = None
+        self._selected_role = "member"
 
-        # Resolve assets directory relative to this file
-        self._base_dir = os.path.dirname(os.path.abspath(__file__))
-        self._assets_dir = os.path.join(self._base_dir, "assets")
+        self.container = ctk.CTkFrame(self, fg_color="#ffffff")
+        self.container.pack(fill="both", expand=True)
+        self.container.pack_propagate(False)
 
-        # Background image canvas
-        self.bg = tk.Canvas(self, highlightthickness=0, bd=0)
-        self.bg.pack(fill=tk.BOTH, expand=True)
-        self._bg_src = None
-        self._bg_img = None
-        self._bg_item = None
-        self._render_background()
-        self.bind("<Configure>", self._on_resize)
-
-        self.container = ttk.Frame(self.bg)
-        self.container.place(relx=0.5, rely=0.10, anchor="n")
-
-        # Landing drawing state
-        self._landing_items = []
-        self._landing_roles = []
-        self._mode = "landing"  # 'landing' or 'auth'
+        self._mode = None
+        self.auth_page: AuthPage | None = None
+        self.landing_frame: ctk.CTkFrame | None = None
+        self.dashboard_frame: ctk.CTkFrame | None = None
 
         self.show_landing()
 
-    def clear(self):
-        for child in self.container.winfo_children():
-            child.destroy()
-        # Also clear any landing grid placed on the background canvas
-        if hasattr(self, "_landing_grid") and self._landing_grid is not None:
+    def clear(self) -> None:
+        """Remove any existing view widgets."""
+        if self.auth_page is not None:
             try:
-                self._landing_grid.destroy()
+                self.auth_page.destroy()
             except Exception:
                 pass
-            self._landing_grid = None
-        # Clear canvas drawn landing artifacts
-        if hasattr(self, "_landing_items") and self._landing_items:
-            for item in self._landing_items:
-                try:
-                    self.bg.delete(item)
-                except Exception:
-                    pass
-            self._landing_items = []
+            self.auth_page = None
 
-    def show_landing(self):
+        for child in list(self.container.winfo_children()):
+            try:
+                child.destroy()
+            except Exception:
+                pass
+
+        self.landing_frame = None
+        self.dashboard_frame = None
+
+    def show_landing(self) -> None:
+        """Render the landing screen matching the provided layout."""
         self.clear()
         self._mode = "landing"
-        # Hide auth container while on landing
-        try:
-            self.container.place_forget()
-        except Exception:
-            pass
-        # Data used for landing draw
-        self._landing_roles = [
-            ("Security Guard", "guard", os.path.join(self._assets_dir, "security_guard-removebg-preview.png")),
-            ("Campus Student", "member", os.path.join(self._assets_dir, "student-removebg-preview.png")),
-            ("Campus Management", "admin", os.path.join(self._assets_dir, "management-removebg-preview.png")),
-        ]
-        self._draw_landing()
 
-    def show_auth(self, role):
+        frame = ctk.CTkFrame(self.container, fg_color="#ffffff", width=800, height=500)
+        frame.pack(fill="both", expand=True)
+        frame.pack_propagate(False)
+
+        title_box = ctk.CTkFrame(frame, fg_color="#ffffff", width=770, height=60)
+        title_box.place(x=35, y=30)
+
+        title_label = ctk.CTkLabel(
+            frame,
+            text="Welcome To Vehicle Parking Management System",
+            font=self.font_title,
+            text_color="#000000",
+            width=730,
+            height=35,
+        )
+        title_label.place(x=80, y=34)
+
+        subtitle_label = ctk.CTkLabel(
+            frame,
+            text="Choose Your Role",
+            font=self.font_subtitle,
+            text_color="#000000",
+            width=375,
+            height=30,
+        )
+        subtitle_label.place(x=230, y=111)
+
+        self._create_role_box(
+            frame,
+            role="member",
+            box_coords=(65, 210, 210, 128),
+            label_coords=(80, 258, 156, 43),
+            text="Campus Student",
+        )
+        self._create_role_box(
+            frame,
+            role="guard",
+            box_coords=(323, 211, 210, 128),
+            label_coords=(338, 258, 156, 43),
+            text="Security Guard",
+        )
+        self._create_role_box(
+            frame,
+            role="admin",
+            box_coords=(567, 211, 245, 128),
+            label_coords=(582, 258, 211, 43),
+            text="Campus Management",
+        )
+
+        footer_label = ctk.CTkLabel(
+            frame,
+            text="@ 2025 Central Michigan University, All rights are reserved",
+            font=self.font_footer,
+            text_color="#999999",
+            width=560,
+            height=40,
+        )
+        footer_label.place(x=180, y=430)
+
+        self.landing_frame = frame
+
+    def _create_role_box(
+        self,
+        parent: ctk.CTkFrame,
+        *,
+        role: str,
+        box_coords: tuple[int, int, int, int],
+        label_coords: tuple[int, int, int, int],
+        text: str,
+    ) -> None:
+        box_x, box_y, box_w, box_h = box_coords
+        label_x, label_y, label_w, label_h = label_coords
+
+        box = ctk.CTkFrame(
+            parent,
+            fg_color="#1647E8",
+            corner_radius=4,
+            width=box_w,
+            height=box_h,
+            border_width=3,
+            border_color="#000000",
+        )
+        box.place(x=box_x, y=box_y)
+
+        label = ctk.CTkLabel(
+            box,
+            text=text,
+            font=self.font_box,
+            text_color="#ffffff",
+            width=label_w,
+            height=label_h,
+        )
+        label.place(relx=0.5, rely=0.5, anchor="center")
+
+        def _handle_click(_event=None) -> None:
+            self.show_auth(role)
+
+        def _on_enter(_event=None) -> None:
+            box.configure(fg_color="#1d5bff")
+            label.configure(text_color="#ffffff")
+
+        def _on_leave(_event=None) -> None:
+            box.configure(fg_color="#1647E8")
+            label.configure(text_color="#ffffff")
+
+        for widget in (box, label):
+            widget.bind("<Button-1>", _handle_click)
+            widget.bind("<Enter>", _on_enter)
+            widget.bind("<Leave>", _on_leave)
+
+    def show_auth(self, role: str | None = None) -> None:
+        """Render the authentication view."""
         self.clear()
         self._mode = "auth"
-        # Ensure landing will not redraw while in auth
-        self._landing_roles = []
-        # Show container for auth
-        self.container.place(relx=0.5, rely=0.10, anchor="n")
-        display_role = {
-            "guard": "Security Guard",
-            "member": "Campus Student",
-            "admin": "Campus Management",
-        }.get(role, role.title())
 
-        # Build a tidy auth layout with only the selected role image at the top
-        card = ttk.Frame(self.container)
-        card.grid(row=0, column=0, padx=24, pady=12)
+        selected_role = role or self._selected_role or "member"
+        self._selected_role = selected_role
 
-        # Back button
-        back_bar = ttk.Frame(card)
-        back_bar.grid(row=0, column=0, sticky="w")
-        ttk.Button(back_bar, text="← Back", command=self.show_landing).pack(pady=(0, 4))
-
-        # Role image header
-        img_path = {
-            "guard": os.path.join(self._assets_dir, "security_guard-removebg-preview.png"),
-            "member": os.path.join(self._assets_dir, "student-removebg-preview.png"),
-            "admin": os.path.join(self._assets_dir, "management-removebg-preview.png"),
-        }.get(role, "")
-        self._auth_role_img = self._load_role_image(img_path, size=(140, 140))
-        img_lbl = tk.Label(card, image=self._auth_role_img, bd=0, highlightthickness=0)
-        img_lbl.grid(row=1, column=0, pady=(4, 6))
-
-        title = ttk.Label(card, text=f"{display_role} - Login / Register")
-        title.configure(font=("Segoe UI Semibold", 13))
-        title.grid(row=2, column=0, pady=(0, 8))
-
-        # Form container with notebook
-        form_wrap = ttk.Frame(card)
-        form_wrap.grid(row=3, column=0)
-        nb = ttk.Notebook(form_wrap)
-        nb.pack(fill=tk.BOTH, expand=True)
-
-        login_frame = ttk.Frame(nb)
-        register_frame = ttk.Frame(nb)
-        nb.add(login_frame, text="Login")
-        nb.add(register_frame, text="Register")
-
-        # Login tab
-        ttk.Label(login_frame, text="Email").grid(row=0, column=0, sticky=tk.W, padx=8, pady=8)
-        email_var = tk.StringVar()
-        ttk.Entry(login_frame, textvariable=email_var, width=32).grid(row=0, column=1, padx=8, pady=8)
-
-        ttk.Label(login_frame, text="Password").grid(row=1, column=0, sticky=tk.W, padx=8, pady=8)
-        password_var = tk.StringVar()
-        ttk.Entry(login_frame, textvariable=password_var, show="*", width=32).grid(row=1, column=1, padx=8, pady=8)
-
-        def on_login():
-            user = self.auth.login(email_var.get().strip(), password_var.get())
-            if not user:
-                messagebox.showerror("Login failed", "Invalid credentials")
-                return
-            
-            # Special admin access restriction
-            if role == "admin":
-                admin_email = "ravi.abhinavyadav@gmail.com"
-                if user["email"] != admin_email:
-                    messagebox.showerror("Access Denied", f"Admin access is restricted to {admin_email} only. Other campus employees can register but won't have admin privileges.")
-                    return
-                # Verify user has admin role for the restricted email
-                if user["role"] != "admin":
-                    messagebox.showerror("Login failed", "Invalid role for admin access")
-                    return
-            else:
-                # For guard and member roles, check role match
-                if user["role"] != role:
-                    messagebox.showerror("Login failed", "Invalid credentials or role mismatch")
-                    return
-            
-            self.current_user = user
-            messagebox.showinfo("Success", f"Welcome {user['full_name']}")
-            # Route to role dashboard
-            self.show_dashboard(user["role"]) 
-
-        ttk.Button(login_frame, text="Login", style="Role.TButton", command=on_login).grid(row=2, column=0, columnspan=2, pady=12)
-
-        # Register tab
-        reg_fields = {
-            "College ID": tk.StringVar(),
-            "Full Name": tk.StringVar(),
-            "Email": tk.StringVar(),
-            "Password": tk.StringVar(),
-        }
-
-        for i, (label, var) in enumerate(reg_fields.items()):
-            ttk.Label(register_frame, text=label).grid(row=i, column=0, sticky=tk.W, padx=8, pady=8)
-            show = "*" if label == "Password" else None
-            ttk.Entry(register_frame, textvariable=var, show=show, width=32).grid(row=i, column=1, padx=8, pady=8)
-
-        def on_register():
-            try:
-                # Check for admin role restriction during registration
-                if role == "admin":
-                    admin_email = "ravi.abhinavyadav@gmail.com"
-                    if reg_fields["Email"].get().strip() != admin_email:
-                        messagebox.showwarning("Admin Registration Restricted", 
-                                             f"Admin access is restricted to {admin_email} only. "
-                                             "Other campus employees can register with different roles.")
-                        return
-                
-                self.auth.register(
-                    reg_fields["College ID"].get().strip(),
-                    reg_fields["Full Name"].get().strip(),
-                    reg_fields["Email"].get().strip(),
-                    reg_fields["Password"].get(),
-                    role,
-                )
-                messagebox.showinfo("Registered", "Registration successful. You can now login.")
-                nb.select(0)
-            except Exception as e:
-                messagebox.showerror("Error", str(e))
-
-        ttk.Button(register_frame, text="Register", style="Role.TButton", command=on_register).grid(row=len(reg_fields), column=0, columnspan=2, pady=12)
-
-    def _render_background(self):
-        w = max(self.winfo_width(), 1)
-        h = max(self.winfo_height(), 1)
-        if w < 10 or h < 10:
-            # window not fully initialized yet
-            self.after(50, self._render_background)
-            return
-        self.bg.config(width=w, height=h)
-        try:
-            if self._bg_src is None:
-                bg_path = os.path.join(self._assets_dir, "college_background.jpg")
-                self._bg_src = Image.open(bg_path).convert("RGB")
-            # Fit image to canvas while preserving aspect ratio (cover)
-            fitted = ImageOps.fit(self._bg_src, (w, h), Image.LANCZOS)
-            fitted = fitted.filter(ImageFilter.GaussianBlur(radius=1.8))
-            fitted = ImageEnhance.Brightness(fitted).enhance(1.06)
-            self._bg_img = ImageTk.PhotoImage(fitted)
-            if self._bg_item is None:
-                self._bg_item = self.bg.create_image(0, 0, image=self._bg_img, anchor="nw")
-            else:
-                self.bg.itemconfig(self._bg_item, image=self._bg_img)
-        except Exception:
-            # fallback to flat color if image missing
-            self.bg.delete("all")
-            self._bg_item = None
-            self.bg.create_rectangle(0, 0, w, h, fill="#e9effa", outline="")
-        # Fade-in window
-        try:
-            self.attributes("-alpha", 0.0)
-            def fade():
-                alpha = float(self.attributes("-alpha"))
-                if alpha < 1.0:
-                    alpha = min(1.0, alpha + 0.07)
-                    self.attributes("-alpha", alpha)
-                    self.after(25, fade)
-            fade()
-        except Exception:
-            pass
-
-    def _load_role_image(self, path: str, size=(180, 180)):
-        try:
-            img = Image.open(path).convert("RGBA")
-            img = img.resize(size, Image.LANCZOS)
-            return ImageTk.PhotoImage(img)
-        except Exception:
-            print(f"[UI] Role image missing or failed to load: {path}")
-            # Placeholder if missing
-            ph = Image.new("RGBA", size, (255, 255, 255, 0))
-            return ImageTk.PhotoImage(ph)
-
-    def _on_resize(self, _event):
-        # Throttle re-render to avoid excessive processing
-        if hasattr(self, "_resize_job") and self._resize_job:
-            self.after_cancel(self._resize_job)
-        self._resize_job = self.after(60, self._render_background)
-        # Keep landing centered on resize only in landing mode
-        if self._mode == "landing" and hasattr(self, "_landing_roles") and self._landing_roles:
-            if hasattr(self, "_relayout_job") and self._relayout_job:
-                self.after_cancel(self._relayout_job)
-            self._relayout_job = self.after(80, self._draw_landing)
-        
-        # Force layout update for dashboard views
-        if self._mode == "dashboard":
-            self.update_idletasks()
-
-    def _draw_landing(self):
-        # Remove previous landing items
-        if hasattr(self, "_landing_items") and self._landing_items:
-            for item in self._landing_items:
-                try:
-                    self.bg.delete(item)
-                except Exception:
-                    pass
-        self._landing_items = []
-
-        w = max(self.winfo_width(), 1)
-        h = max(self.winfo_height(), 1)
-        cx = w // 2
-
-        # Title and subtitle on transparent background
-        title_id = self.bg.create_text(
-            cx,
-            int(h * 0.13),
-            text="Welcome to Michigan Vehicle Parking Management System",
-            font=("Segoe UI Semibold", 16),
-            fill="#0f1b2d",
+        self.auth_page = AuthPage(
+            parent=self.container,
+            role=selected_role,
+            auth_service=self.auth,
+            on_back=self.show_landing,
+            on_success=self.handle_auth_success,
         )
-        # Glassy strip behind title
-        t_bbox = self.bg.bbox(title_id)
-        if t_bbox:
-            pad_x, pad_y = 16, 8
-            rect_t = self.bg.create_rectangle(
-                t_bbox[0] - pad_x,
-                t_bbox[1] - pad_y,
-                t_bbox[2] + pad_x,
-                t_bbox[3] + pad_y,
-                fill="#ffffff",
-                outline="",
-                stipple="gray25",
-            )
-            self.bg.tag_lower(rect_t, title_id)
-            self._landing_items.append(rect_t)
 
-        subtitle_id = self.bg.create_text(
-            cx,
-            int(h * 0.18),
-            text="Choose your role",
-            font=("Segoe UI", 11),
-            fill="#27364a",
-        )
-        s_bbox = self.bg.bbox(subtitle_id)
-        if s_bbox:
-            pad_x, pad_y = 12, 6
-            rect_s = self.bg.create_rectangle(
-                s_bbox[0] - pad_x,
-                s_bbox[1] - pad_y,
-                s_bbox[2] + pad_x,
-                s_bbox[3] + pad_y,
-                fill="#ffffff",
-                outline="",
-                stipple="gray25",
-            )
-            self.bg.tag_lower(rect_s, subtitle_id)
-            self._landing_items.append(rect_s)
-        self._landing_items.extend([title_id, subtitle_id])
+    def handle_auth_success(self, user: dict) -> None:
+        """Persist authenticated user and open dashboard."""
+        self.current_user = user
+        self.show_dashboard()
 
-        # Draw role images centered horizontally
-        tile_w, tile_h = 200, 200
-        spacing = 48
-        total_w = tile_w * 3 + spacing * 2
-        start_x = cx - total_w // 2 + tile_w // 2
-        y_top = int(h * 0.26)
+    def show_dashboard(self) -> None:
+        """Render the role specific dashboard page."""
+        from pages import campus_member, security_guard, campus_management
 
-        # Keep references to PhotoImages
-        self._role_images = []
-        for idx, (label, role, path) in enumerate(self._landing_roles):
-            x = start_x + idx * (tile_w + spacing)
-            img = self._load_role_image(path, size=(tile_w, tile_h))
-            self._role_images.append(img)
-            tag_img = f"role_img_{role}"
-            tag_txt = f"role_txt_{role}"
-            iid = self.bg.create_image(x, y_top + tile_h // 2, image=img, tags=(tag_img,))
-            tid = self.bg.create_text(x, y_top + tile_h + 24, text=label, font=("Segoe UI", 10))
-            # Glass strip behind role label
-            lb = self.bg.bbox(tid)
-            if lb:
-                pad_x, pad_y = 10, 5
-                rect_l = self.bg.create_rectangle(
-                    lb[0] - pad_x,
-                    lb[1] - pad_y,
-                    lb[2] + pad_x,
-                    lb[3] + pad_y,
-                    fill="#ffffff",
-                    outline="",
-                    stipple="gray25",
-                )
-                self.bg.tag_lower(rect_l, tid)
-                self._landing_items.append(rect_l)
-            self._landing_items.extend([iid, tid])
-
-            def _click(_e=None, r=role):
-                self.show_auth(r)
-
-            self.bg.tag_bind(tag_img, "<Button-1>", _click)
-            self.bg.tag_bind(tag_txt, "<Button-1>", _click)
-
-
-    def show_dashboard(self, role: str):
         self.clear()
         self._mode = "dashboard"
-        # Make container fill the entire window
-        self.container.place(relx=0.0, rely=0.0, relwidth=1.0, relheight=1.0, anchor="nw")
-        
-        # Configure container to expand
-        self.container.grid_rowconfigure(0, weight=1)
-        self.container.grid_columnconfigure(0, weight=1)
-        def _logout():
-            self.current_user = None
-            self.show_landing()
-        try:
-            if role == "guard":
-                from pages.guard_page import render as render_guard
-                render_guard(self.container, on_logout=_logout, current_user=self.current_user)
-            elif role == "member":
-                from pages.member_page import render as render_member
-                render_member(self.container, on_logout=_logout, current_user=self.current_user)
-            elif role == "admin":
-                from pages.admin_page import render as render_admin
-                render_admin(self.container, on_logout=_logout, current_user=self.current_user)
-            else:
-                messagebox.showerror("Unknown role", f"Unsupported role: {role}")
-                self.show_landing()
-        except Exception as e:
-            messagebox.showerror("Error", f"Failed to load dashboard: {e}")
-            self.show_landing()
-        
+
+        role = (self.current_user or {}).get("role", "member")
+
+        renderers = {
+            "member": campus_member.render,
+            "guard": security_guard.render,
+            "admin": campus_management.render,
+        }
+
+        renderer = renderers.get(role)
+        if renderer is None:
+            renderer = campus_member.render
+
+        self.dashboard_frame = renderer(
+            parent=self.container,
+            user=self.current_user,
+            on_logout=self.logout,
+        )
+
+    def logout(self) -> None:
+        """Return to landing view and clear user state."""
+        self.current_user = None
+        self.show_landing()
+
 
 if __name__ == "__main__":
     app = App()
