@@ -225,7 +225,7 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
         title="Current Status",
         value=snapshot.get("parking_status", "Not Parked"),
         bg="#e7f1ff",
-        icon=_get_icon("dashboard.png", (24, 24)),
+        icon=_get_icon("clock.png", (24, 24)),
     )
 
     status_grid = ctk.CTkFrame(body, fg_color="#ffffff")
@@ -310,7 +310,7 @@ def _metric_card(
     bg: str,
     icon: ctk.CTkImage | None = None,
 ) -> ctk.CTkFrame:
-    card = ctk.CTkFrame(parent, fg_color=bg, corner_radius=20, width=220, height=170)
+    card = ctk.CTkFrame(parent, fg_color=bg, corner_radius=20, width=220, height=174)
     card.grid(row=row, column=column, padx=8, pady=8, sticky="nsew")
     card.grid_propagate(False)
 

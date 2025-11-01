@@ -135,10 +135,10 @@ class App(ctk.CTk):
         box = ctk.CTkFrame(
             parent,
             fg_color="#1647E8",
-            corner_radius=4,
+            corner_radius=18,
             width=box_w,
             height=box_h,
-            border_width=3,
+            border_width=1,
             border_color="#000000",
         )
         box.place(x=box_x, y=box_y)
