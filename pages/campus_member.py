@@ -13,6 +13,8 @@ from services.member_service import MemberService
 
 ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
 _member_service = MemberService()
+_ICON_CACHE: dict[tuple[str, tuple[int, int]], ctk.CTkImage] = {}
+
 
 def render(parent, user=None, on_logout=None):
     """Render the campus member dashboard page."""
@@ -64,18 +66,17 @@ def _build_sidebar(parent, on_logout) -> ctk.CTkFrame:
     ).grid(row=0, column=0, pady=(20, 10))
 
     nav_buttons: dict[str, ctk.CTkButton] = {}
+    icon_map = {
+        "dashboard": _get_icon("dashboard.png", (20, 20)),
+        "slots": _get_icon("jeep_715882.png", (20, 20)),
+        "profile": _get_icon("profile.png", (20, 20)),
+    }
 
-    def _make_button(text: str, view_name: str, row_index: int, primary: bool = False, icon: str | None = None) -> ctk.CTkButton:
-        image = None
-        if icon:
-            path = ASSETS_DIR / icon
-            if path.exists():
-                img = Image.open(path)
-                image = ctk.CTkImage(light_image=img, dark_image=img.copy(), size=(20, 20))
+    def _make_button(text: str, view_name: str, row_index: int, primary: bool = False) -> ctk.CTkButton:
         btn = ctk.CTkButton(
             sidebar,
             text=text,
-            image=image,
+            image=icon_map.get(view_name),
             compound="left",
             width=150,
             height=42,
@@ -89,17 +90,12 @@ def _build_sidebar(parent, on_logout) -> ctk.CTkFrame:
         nav_buttons[view_name] = btn
         return btn
 
-    _make_button("Dashboard", "dashboard", 1, primary=True, icon="dashboard_1828765.png")
-    _make_button("My Slots", "slots", 2, icon="jeep_715882.png")
-    _make_button("Profile", "profile", 3, icon="profile.png")
+    _make_button("Dashboard", "dashboard", 1, primary=True)
+    _make_button("My Slots", "slots", 2)
+    _make_button("Profile", "profile", 3)
 
     if on_logout is not None:
-        logout_icon = None
-        logout_path = ASSETS_DIR / "logout.png"
-        if logout_path.exists():
-            img = Image.open(logout_path)
-            logout_icon = ctk.CTkImage(light_image=img, dark_image=img.copy(), size=(18, 18))
-
+        logout_icon = _get_icon("logout.png", (18, 18))
         ctk.CTkButton(
             sidebar,
             text="Logout",
@@ -202,7 +198,7 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
         title="Registered Vehicles",
         value=str(snapshot.get("registered_count", 0)),
         bg="#e7f1ff",
-        icon="jeep_715882.png",
+        icon=_get_icon("jeep_715882.png", (24, 24)),
     )
 
     verification_status = snapshot.get("verification_status", "pending").title()
@@ -219,7 +215,7 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
         title="Verification Status",
         value=verification_status,
         bg=verification_bg,
-        icon="verified.png",
+        icon=_get_icon("verified.png", (24, 24)),
     )
 
     _metric_card(
@@ -229,7 +225,7 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
         title="Current Status",
         value=snapshot.get("parking_status", "Not Parked"),
         bg="#e7f1ff",
-        icon="clock_4270137.png",
+        icon=_get_icon("dashboard.png", (24, 24)),
     )
 
     status_grid = ctk.CTkFrame(body, fg_color="#ffffff")
@@ -304,23 +300,25 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
     return frame
 
 
-def _metric_card(parent, *, row: int, column: int, title: str, value: Any, bg: str, icon: str | None = None) -> ctk.CTkFrame:
+def _metric_card(
+    parent,
+    *,
+    row: int,
+    column: int,
+    title: str,
+    value: Any,
+    bg: str,
+    icon: ctk.CTkImage | None = None,
+) -> ctk.CTkFrame:
     card = ctk.CTkFrame(parent, fg_color=bg, corner_radius=20, width=220, height=170)
     card.grid(row=row, column=column, padx=8, pady=8, sticky="nsew")
     card.grid_propagate(False)
 
-    icon_image = None
-    if icon:
-        icon_path = ASSETS_DIR / icon
-        if icon_path.exists():
-            img = Image.open(icon_path)
-            icon_image = ctk.CTkImage(light_image=img, dark_image=img.copy(), size=(24, 24))
-
     title_frame = ctk.CTkFrame(card, fg_color="transparent")
     title_frame.pack(pady=(16, 6))
 
-    if icon_image:
-        ctk.CTkLabel(title_frame, text="", image=icon_image).pack(side="left", padx=(0, 6))
+    if icon is not None:
+        ctk.CTkLabel(title_frame, text="", image=icon).pack(side="left", padx=(0, 6))
 
     ctk.CTkLabel(
         title_frame,
@@ -384,4 +382,19 @@ def _load_snapshot(user: dict | None) -> dict[str, Any]:
         return _member_service.get_dashboard_snapshot(int(user_id))
     except Exception:
         return {}
+
+
+def _get_icon(filename: str, size: tuple[int, int]) -> ctk.CTkImage | None:
+    key = (filename, size)
+    if key in _ICON_CACHE:
+        return _ICON_CACHE[key]
+
+    image_path = ASSETS_DIR / filename
+    if not image_path.exists():
+        return None
+
+    image = Image.open(image_path).convert("RGBA")
+    icon = ctk.CTkImage(light_image=image, dark_image=image, size=size)
+    _ICON_CACHE[key] = icon
+    return icon
 
