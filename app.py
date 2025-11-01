@@ -63,8 +63,8 @@ class App(ctk.CTk):
         frame.pack(fill="both", expand=True)
         frame.pack_propagate(False)
 
-        title_box = ctk.CTkFrame(frame, fg_color="#ffffff", width=770, height=60)
-        title_box.place(x=35, y=30)
+        title_bx = ctk.CTkFrame(frame, fg_color="#ffffff", width=770, height=60)
+        title_bx.place(x=35, y=30)
 
         title_label = ctk.CTkLabel(
             frame,
@@ -76,7 +76,7 @@ class App(ctk.CTk):
         )
         title_label.place(x=80, y=34)
 
-        subtitle_label = ctk.CTkLabel(
+        subtitle_lbl = ctk.CTkLabel(
             frame,
             text="Choose Your Role",
             font=self.font_subtitle,
@@ -84,31 +84,31 @@ class App(ctk.CTk):
             width=375,
             height=30,
         )
-        subtitle_label.place(x=230, y=111)
+        subtitle_lbl.place(x=230, y=111)
 
-        self._create_role_box(
+        self.create_role_bx(
             frame,
             role="member",
-            box_coords=(65, 210, 210, 128),
-            label_coords=(80, 258, 156, 43),
+            bx_cords=(65, 210, 210, 128),
+            lbl_cords=(80, 258, 156, 43),
             text="Campus Student",
         )
-        self._create_role_box(
+        self.create_role_bx(
             frame,
             role="guard",
-            box_coords=(323, 211, 210, 128),
-            label_coords=(338, 258, 156, 43),
+            bx_cords=(323, 211, 210, 128),
+            lbl_cords=(338, 258, 156, 43),
             text="Security Guard",
         )
-        self._create_role_box(
+        self.create_role_bx(
             frame,
             role="admin",
-            box_coords=(567, 211, 245, 128),
-            label_coords=(582, 258, 211, 43),
+            bx_cords=(567, 211, 245, 128),
+            lbl_cords=(582, 258, 211, 43),
             text="Campus Management",
         )
 
-        footer_label = ctk.CTkLabel(
+        foot_lbl = ctk.CTkLabel(
             frame,
             text="@ 2025 Central Michigan University, All rights are reserved",
             font=self.font_footer,
@@ -116,58 +116,58 @@ class App(ctk.CTk):
             width=560,
             height=40,
         )
-        footer_label.place(x=180, y=430)
+        foot_lbl.place(x=180, y=430)
 
         self.landing_frame = frame
 
-    def _create_role_box(
+    def create_role_bx(
         self,
         parent: ctk.CTkFrame,
         *,
         role: str,
-        box_coords: tuple[int, int, int, int],
-        label_coords: tuple[int, int, int, int],
+        bx_cords: tuple[int, int, int, int],
+        lbl_cords: tuple[int, int, int, int],
         text: str,
     ) -> None:
-        box_x, box_y, box_w, box_h = box_coords
-        label_x, label_y, label_w, label_h = label_coords
+        bx_x, bx_y, bx_w, bx_h = bx_cords
+        lbl_x, lbl_y, lbl_w, lbl_h = lbl_cords
 
-        box = ctk.CTkFrame(
+        bx = ctk.CTkFrame(
             parent,
             fg_color="#1647E8",
             corner_radius=18,
-            width=box_w,
-            height=box_h,
+            width=bx_w,
+            height=bx_h,
             border_width=1,
             border_color="#000000",
         )
-        box.place(x=box_x, y=box_y)
+        bx.place(x=bx_x, y=bx_y)
 
-        label = ctk.CTkLabel(
-            box,
+        lbl = ctk.CTkLabel(
+            bx,
             text=text,
             font=self.font_box,
             text_color="#ffffff",
-            width=label_w,
-            height=label_h,
+            width=lbl_w,
+            height=lbl_h,
         )
-        label.place(relx=0.5, rely=0.5, anchor="center")
+        lbl.place(relx=0.5, rely=0.5, anchor="center")
 
-        def _handle_click(_event=None) -> None:
+        def _handle_clk(_event=None) -> None:
             self.show_auth(role)
 
         def _on_enter(_event=None) -> None:
-            box.configure(fg_color="#1d5bff")
-            label.configure(text_color="#ffffff")
+            bx.configure(fg_color="#1d5bff")
+            lbl.configure(text_color="#ffffff")
 
-        def _on_leave(_event=None) -> None:
-            box.configure(fg_color="#1647E8")
-            label.configure(text_color="#ffffff")
+        def _on_exit(_event=None) -> None:
+            bx.configure(fg_color="#1647E8")
+            lbl.configure(text_color="#ffffff")
 
-        for widget in (box, label):
-            widget.bind("<Button-1>", _handle_click)
+        for widget in (bx, lbl):
+            widget.bind("<Button-1>", _handle_clk)
             widget.bind("<Enter>", _on_enter)
-            widget.bind("<Leave>", _on_leave)
+            widget.bind("<Leave>", _on_exit)
 
     def show_auth(self, role: str | None = None) -> None:
         """Render the authentication view."""
@@ -182,10 +182,10 @@ class App(ctk.CTk):
             role=selected_role,
             auth_service=self.auth,
             on_back=self.show_landing,
-            on_success=self.handle_auth_success,
+            on_success=self.on_auth_success,
         )
 
-    def handle_auth_success(self, user: dict) -> None:
+    def on_auth_success(self, user: dict) -> None:
         """Persist authenticated user and open dashboard."""
         self.current_user = user
         self.show_dashboard()
@@ -200,14 +200,14 @@ class App(ctk.CTk):
         role = (self.current_user or {}).get("role", "member")
 
         renderers = {
-            "member": campus_member.render,
+            "member": campus_member.render_member_vw,
             "guard": security_guard.render,
             "admin": campus_management.render,
         }
 
         renderer = renderers.get(role)
         if renderer is None:
-            renderer = campus_member.render
+            renderer = campus_member.render_member_vw
 
         self.dashboard_frame = renderer(
             parent=self.container,

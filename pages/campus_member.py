@@ -11,54 +11,54 @@ from PIL import Image
 
 from services.member_service import MemberService
 
-ASSETS_DIR = Path(__file__).resolve().parents[1] / "assets"
-_member_service = MemberService()
-_ICON_CACHE: dict[tuple[str, tuple[int, int]], ctk.CTkImage] = {}
+assets_path = Path(__file__).resolve().parents[1] / "assets"
+mem_servc = MemberService()
+_icon_cache: dict[tuple[str, tuple[int, int]], ctk.CTkImage] = {}
 
 
-def render(parent, user=None, on_logout=None):
+def render_member_vw(parent, user=None, on_logout=None):
     """Render the campus member dashboard page."""
     root = ctk.CTkFrame(parent, fg_color="#f5f7ff")
     root.pack(fill="both", expand=True)
     root.grid_rowconfigure(0, weight=1)
     root.grid_columnconfigure(1, weight=1)
 
-    sidebar = _build_sidebar(root, on_logout)
-    sidebar.grid(row=0, column=0, sticky="nsw")
+    sbar = _mk_sbar(root, on_logout)
+    sbar.grid(row=0, column=0, sticky="nsw")
 
-    content = ctk.CTkFrame(root, fg_color="#ffffff")
-    content.grid(row=0, column=1, sticky="nsew")
-    content.grid_columnconfigure(0, weight=1)
-    content.grid_rowconfigure(0, weight=1)
+    main_panel = ctk.CTkFrame(root, fg_color="#ffffff")
+    main_panel.grid(row=0, column=1, sticky="nsew")
+    main_panel.grid_columnconfigure(0, weight=1)
+    main_panel.grid_rowconfigure(0, weight=1)
 
-    views = {
-        "dashboard": _build_dashboard_view(content, user),
-        "slots": _build_placeholder_view(content, "My Slots"),
-        "profile": _build_placeholder_view(content, "Profile"),
+    vw = {
+        "dashboard": _mk_dashboard_vw(main_panel, user),
+        "slots": _mk_placeholder_vw(main_panel, "My Slots"),
+        "profile": _mk_placeholder_vw(main_panel, "Profile"),
     }
 
-    def set_view(view: str) -> None:
-        for child in views.values():
+    def set_vw(view: str) -> None:
+        for child in vw.values():
             child.grid_remove()
-        views[view].grid(row=0, column=0, sticky="nsew")
-        sidebar.update_selection(view)
+        vw[view].grid(row=0, column=0, sticky="nsew")
+        sbar.upd_select(view)
 
-    sidebar.configure_navigator(set_view)
-    set_view("dashboard")
+    sbar.config_nav(set_vw)
+    set_vw("dashboard")
     return root
 
 
-def _build_sidebar(parent, on_logout) -> ctk.CTkFrame:
-    sidebar = ctk.CTkFrame(parent, fg_color="#e5edff", width=180)
-    sidebar.grid_propagate(False)
-    sidebar.grid_rowconfigure((0, 1, 2, 3, 4, 5), weight=0)
-    sidebar.grid_rowconfigure(7, weight=1)
+def _mk_sbar(parent, on_logout) -> ctk.CTkFrame:
+    sbar = ctk.CTkFrame(parent, fg_color="#e5edff", width=180)
+    sbar.grid_propagate(False)
+    sbar.grid_rowconfigure((0, 1, 2, 3, 4, 5), weight=0)
+    sbar.grid_rowconfigure(7, weight=1)
 
     nav_title_font = ctk.CTkFont(family="Inter", size=14, weight="bold")
     nav_font = ctk.CTkFont(family="Inter", size=13)
 
     ctk.CTkLabel(
-        sidebar,
+        sbar,
         text="",
         width=1,
         height=20,
@@ -72,9 +72,9 @@ def _build_sidebar(parent, on_logout) -> ctk.CTkFrame:
         "profile": _get_icon("profile.png", (20, 20)),
     }
 
-    def _make_button(text: str, view_name: str, row_index: int, primary: bool = False) -> ctk.CTkButton:
+    def mk_btn(text: str, view_name: str, row_index: int, primary: bool = False) -> ctk.CTkButton:
         btn = ctk.CTkButton(
-            sidebar,
+            sbar,
             text=text,
             image=icon_map.get(view_name),
             compound="left",
@@ -90,14 +90,14 @@ def _build_sidebar(parent, on_logout) -> ctk.CTkFrame:
         nav_buttons[view_name] = btn
         return btn
 
-    _make_button("Dashboard", "dashboard", 1, primary=True)
-    _make_button("My Slots", "slots", 2)
-    _make_button("Profile", "profile", 3)
+    mk_btn("Dashboard", "dashboard", 1, primary=True)
+    mk_btn("My Slots", "slots", 2)
+    mk_btn("Profile", "profile", 3)
 
     if on_logout is not None:
         logout_icon = _get_icon("logout.png", (18, 18))
         ctk.CTkButton(
-            sidebar,
+            sbar,
             text="Logout",
             width=140,
             height=40,
@@ -111,7 +111,7 @@ def _build_sidebar(parent, on_logout) -> ctk.CTkFrame:
             command=on_logout,
         ).grid(row=7, column=0, padx=20, pady=24, sticky="s")
 
-    def update_selection(view: str) -> None:
+    def upd_select(view: str) -> None:
         for key, btn in nav_buttons.items():
             primary = key == view
             btn.configure(
@@ -119,23 +119,23 @@ def _build_sidebar(parent, on_logout) -> ctk.CTkFrame:
                 text_color="#2563eb" if primary else "#111827",
             )
 
-    def configure_navigator(callback):
+    def config_nav(callback):
         for name, btn in nav_buttons.items():
             btn.configure(command=lambda v=name: callback(v))
 
-    sidebar.configure_navigator = configure_navigator  # type: ignore[attr-defined]
-    sidebar.update_selection = update_selection  # type: ignore[attr-defined]
-    update_selection("dashboard")
+    sbar.config_nav = config_nav  # type: ignore[attr-defined]
+    sbar.upd_select = upd_select  # type: ignore[attr-defined]
+    upd_select("dashboard")
 
-    return sidebar
+    return sbar
 
 
-def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFrame:
+def _mk_dashboard_vw(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFrame:
     frame = ctk.CTkFrame(parent, fg_color="#ffffff")
     frame.grid_columnconfigure(0, weight=1)
     frame.grid_rowconfigure(1, weight=1)
 
-    header_fonts = {
+    header_font = {
         "title": ctk.CTkFont(family="Inter", size=24, weight="bold"),
         "subtitle": ctk.CTkFont(family="Inter", size=14, weight="bold"),
         "meta": ctk.CTkFont(family="Inter", size=12),
@@ -150,28 +150,28 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
     ctk.CTkLabel(
         header,
         text=f"Welcome {user_name}",
-        font=header_fonts["title"],
+        font=header_font["title"],
         text_color="#111827",
     ).grid(row=0, column=0, sticky="w")
 
-    datetime_frame = ctk.CTkFrame(header, fg_color="#ffffff")
-    datetime_frame.grid(row=0, column=1, sticky="e", padx=(12, 0))
+    date_time_fm = ctk.CTkFrame(header, fg_color="#ffffff")
+    date_time_fm.grid(row=0, column=1, sticky="e", padx=(12, 0))
 
     ctk.CTkLabel(
-        datetime_frame,
+        date_time_fm,
         text="Date :",
-        font=header_fonts["meta"],
+        font=header_font["meta"],
         text_color="#1f2937",
     ).pack(side="left", padx=(0, 6))
-    date_label = _info_pill(datetime_frame, header_fonts["meta"], width=140)
+    date_lbl = _mk_info_fill(date_time_fm, header_font["meta"], width=140)
 
     ctk.CTkLabel(
-        datetime_frame,
+        date_time_fm,
         text="Time :",
-        font=header_fonts["meta"],
+        font=header_font["meta"],
         text_color="#1f2937",
     ).pack(side="left", padx=(12, 6))
-    time_label = _info_pill(datetime_frame, header_fonts["meta"], width=140)
+    time_lbl = _mk_info_fill(date_time_fm, header_font["meta"], width=140)
 
     body = ctk.CTkFrame(frame, fg_color="#ffffff")
     body.grid(row=1, column=0, sticky="nsew", padx=24, pady=(0, 24))
@@ -180,81 +180,81 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
     ctk.CTkLabel(
         body,
         text="Manage Your Parking and Profile",
-        font=header_fonts["subtitle"],
+        font=header_font["subtitle"],
         text_color="#1f2937",
     ).grid(row=0, column=0, sticky="w", pady=(0, 16))
 
-    snapshot = _load_snapshot(user)
+    dashboard_info = _get_snapshot(user)
 
-    metrics_grid = ctk.CTkFrame(body, fg_color="#ffffff")
-    metrics_grid.grid(row=1, column=0, sticky="ew")
+    kpi_grid = ctk.CTkFrame(body, fg_color="#ffffff")
+    kpi_grid.grid(row=1, column=0, sticky="ew")
     for col in range(3):
-        metrics_grid.grid_columnconfigure(col, weight=1)
+        kpi_grid.grid_columnconfigure(col, weight=1)
 
-    _metric_card(
-        metrics_grid,
+    _mk_kpi_card(
+        kpi_grid,
         row=0,
         column=0,
         title="Registered Vehicles",
-        value=str(snapshot.get("registered_count", 0)),
+        value=str(dashboard_info.get("registered_count", 0)),
         bg="#e7f1ff",
         icon=_get_icon("jeep_715882.png", (24, 24)),
     )
 
-    verification_status = snapshot.get("verification_status", "pending").title()
+    verification_sts = dashboard_info.get("verification_status", "pending").title()
     verification_bg = {
         "Approved": "#c4f5cb",
         "Rejected": "#fecaca",
         "Pending": "#fef08a",
-    }.get(verification_status, "#fef08a")
+    }.get(verification_sts, "#fef08a")
 
-    _metric_card(
-        metrics_grid,
+    _mk_kpi_card(
+        kpi_grid,
         row=0,
         column=1,
         title="Verification Status",
-        value=verification_status,
+        value=verification_sts,
         bg=verification_bg,
         icon=_get_icon("verified.png", (24, 24)),
     )
 
-    _metric_card(
-        metrics_grid,
+    _mk_kpi_card(
+        kpi_grid,
         row=0,
         column=2,
         title="Current Status",
-        value=snapshot.get("parking_status", "Not Parked"),
+        value=dashboard_info.get("parking_status", "Not Parked"),
         bg="#e7f1ff",
         icon=_get_icon("clock.png", (24, 24)),
     )
 
-    status_grid = ctk.CTkFrame(body, fg_color="#ffffff")
-    status_grid.grid(row=2, column=0, sticky="ew", pady=(16, 12))
+    sts_grid = ctk.CTkFrame(body, fg_color="#ffffff")
+    sts_grid.grid(row=2, column=0, sticky="ew", pady=(16, 12))
     for col in range(3):
-        status_grid.grid_columnconfigure(col, weight=1)
+        sts_grid.grid_columnconfigure(col, weight=1)
 
-    _metric_card(
-        status_grid,
+    _mk_kpi_card(
+        sts_grid,
         row=0,
         column=0,
         title="Slot No",
-        value=snapshot.get("slot_code") or "—",
+        value=dashboard_info.get("slot_code") or "—",
         bg="#e7f1ff",
     )
 
-    _metric_card(
-        status_grid,
+    _mk_kpi_card(
+        sts_grid,
         row=0,
         column=1,
         title="Vehicle Number",
-        value=snapshot.get("vehicle_number") or "—",
+        value=dashboard_info.get("vehicle_number") or "—",
         bg="#e7f1ff",
     )
 
-    entry_time = snapshot.get("entry_time")
+    entry_time = dashboard_info.get("entry_time")
     entry_value = entry_time.strftime("%H:%M:%S") if entry_time else "—"
-    _metric_card(
-        status_grid,
+    _mk_kpi_card(
+        sts_grid,
         row=0,
         column=2,
         title="Entry Time",
@@ -262,45 +262,45 @@ def _build_dashboard_view(parent: ctk.CTkFrame, user: dict | None) -> ctk.CTkFra
         bg="#fef3c7",
     )
 
-    vehicles_frame = ctk.CTkFrame(body, fg_color="#ffffff")
-    vehicles_frame.grid(row=3, column=0, sticky="ew", pady=(8, 0))
-    vehicles_frame.grid_columnconfigure(0, weight=1)
+    vehicle_fm = ctk.CTkFrame(body, fg_color="#ffffff")
+    vehicle_fm.grid(row=3, column=0, sticky="ew", pady=(8, 0))
+    vehicle_fm.grid_columnconfigure(0, weight=1)
 
     ctk.CTkLabel(
-        vehicles_frame,
+        vehicle_fm,
         text="Your Vehicles",
         font=ctk.CTkFont(family="Inter", size=15, weight="bold"),
         text_color="#1f2937",
     ).grid(row=0, column=0, sticky="w", pady=(0, 6))
 
-    vehicles = snapshot.get("vehicles") or []
+    vehicles = dashboard_info.get("vehicles") or []
     if vehicles:
         for idx, plate in enumerate(vehicles, start=1):
             ctk.CTkLabel(
-                vehicles_frame,
+                vehicle_fm,
                 text=f"• {plate}",
                 font=ctk.CTkFont(family="Inter", size=14),
                 text_color="#111827",
             ).grid(row=idx, column=0, sticky="w", pady=2)
     else:
         ctk.CTkLabel(
-            vehicles_frame,
+            vehicle_fm,
             text="No vehicles registered yet.",
             font=ctk.CTkFont(family="Inter", size=14),
             text_color="#6b7280",
         ).grid(row=1, column=0, sticky="w", pady=2)
 
-    def _update_clock() -> None:
+    def upd_clock() -> None:
         now = datetime.now()
-        date_label.configure(text=now.strftime("%d-%m-%Y"))
-        time_label.configure(text=now.strftime("%H:%M:%S"))
-        frame.after(1000, _update_clock)
+        date_lbl.configure(text=now.strftime("%d-%m-%Y"))
+        time_lbl.configure(text=now.strftime("%H:%M:%S"))
+        frame.after(1000, upd_clock)
 
-    _update_clock()
+    upd_clock()
     return frame
 
 
-def _metric_card(
+def _mk_kpi_card(
     parent,
     *,
     row: int,
@@ -337,7 +337,7 @@ def _metric_card(
     return card
 
 
-def _info_pill(parent, font: ctk.CTkFont, width: int = 120) -> ctk.CTkLabel:
+def _mk_info_fill(parent, font: ctk.CTkFont, width: int = 120) -> ctk.CTkLabel:
     wrapper = ctk.CTkFrame(parent, fg_color="#e8f1ff", corner_radius=8, width=width, height=48)
     wrapper.pack(side="left", padx=6)
     wrapper.pack_propagate(False)
@@ -352,7 +352,7 @@ def _info_pill(parent, font: ctk.CTkFont, width: int = 120) -> ctk.CTkLabel:
     return pill
 
 
-def _build_placeholder_view(parent: ctk.CTkFrame, title: str) -> ctk.CTkFrame:
+def _mk_placeholder_vw(parent: ctk.CTkFrame, title: str) -> ctk.CTkFrame:
     view = ctk.CTkFrame(parent, fg_color="#ffffff")
     view.grid_columnconfigure(0, weight=1)
     view.grid_rowconfigure(1, weight=1)
@@ -374,27 +374,27 @@ def _build_placeholder_view(parent: ctk.CTkFrame, title: str) -> ctk.CTkFrame:
     return view
 
 
-def _load_snapshot(user: dict | None) -> dict[str, Any]:
+def _get_snapshot(user: dict | None) -> dict[str, Any]:
     user_id = (user or {}).get("id")
     if not user_id:
         return {}
     try:
-        return _member_service.get_dashboard_snapshot(int(user_id))
+        return mem_servc.get_dashboard_snapshot(int(user_id))
     except Exception:
         return {}
 
 
 def _get_icon(filename: str, size: tuple[int, int]) -> ctk.CTkImage | None:
     key = (filename, size)
-    if key in _ICON_CACHE:
-        return _ICON_CACHE[key]
+    if key in _icon_cache:
+        return _icon_cache[key]
 
-    image_path = ASSETS_DIR / filename
+    image_path = assets_path / filename
     if not image_path.exists():
         return None
 
     image = Image.open(image_path).convert("RGBA")
     icon = ctk.CTkImage(light_image=image, dark_image=image, size=size)
-    _ICON_CACHE[key] = icon
+    _icon_cache[key] = icon
     return icon
 
