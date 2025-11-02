@@ -1,5 +1,5 @@
--- Schema for parking_management
--- Run after creating database `parking_management`
+
+---creating database `parking_management`
 
 USE parking_management;
 

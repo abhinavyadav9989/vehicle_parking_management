@@ -1,8 +1,7 @@
-"""Page modules for the Parking Management System UI."""
-
+# Importing the pages
 __all__ = [
     "auth_pages",
-    "campus_member",
+    "campus_student",
     "security_guard",
     "campus_management",
 ]
